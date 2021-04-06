@@ -1,0 +1,38 @@
+REG		OPL	YM
+// per-op in OPL, per-voice in OPM
+AM/VIB/EG/KSR Multi:4l
+		$20	$23:2l $23:4-6  N/A(percus)  $80:2m  $40:4l
+
+KSL:2 TL :6	$40	$80:2m $60:7l
+AR :4 DR :4	$60	$80:5l $A0:5l
+SL :4 RR :4	$80	$E0 (1:1 relation - yaay)
+KON		$B0-8:bit5	YM=freaky - figure out in a sec...
+FB/C
+
+
+OPL -> OPM OP mapping:
+00 - NA
+01 - 0
+02 - 1
+03 - NA
+04 - 16
+05 - 17
+06 - NA
+07 - NA
+08 - 2
+09 - 3
+0A - 4
+0B - 18
+0C - 19
+0D - 20
+0E - NA
+0F - NA
+10 - 5
+11 - 6
+12 - 7
+13 - 21
+14 - 22
+15 - 23
+
+f-num = freq * 2^(20-block) / 49716
+freq = 49716 * f-num / 2^20-block

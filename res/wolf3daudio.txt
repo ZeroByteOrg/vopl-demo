@@ -1,0 +1,42 @@
+Finally found the key to unlock knowledge of how Wolf3d's audio works:
+
+https://moddingwiki.shikadi.net/wiki/AudioT_Format
+
+playback rate is 700Hz.
+
+file is in AUDIOT format:
+
+HEADER = uint32LE offsets into AUDIOT.WL1
+Each item is a "chunk" starting at that offset.
+The final entry should point to the end of the last audio chunk.
+Some header entries end up being zero bytes long - if a header X is followed by
+another header Y and X = Y, then X is considered to not be a chunk.
+Thus if Headers 21 and 22 both have the same offset value, then 22 would be chunk 21, not 22.
+
+
+The actual Audio data is uncompressed in Wolf3d data files (yaaay)
+
+Song offsets:
+Adlib tunes start at chunk 207 - header starts at 0x414 (strange)
+E1M1 (Get Them) = 3 (300) 0xa5e3 - ef10
+Horst Lied (Nazi Nor Music) = 7 (314) 0xf019( - 0x1115f (8428 bytes after 2byte header)
+
+Entries start with 2-byte LE marker showing size of song data within the chunk
+Then after the chunk is a "trailer" containing the filename and other info.
+2bytes = ?
+char[16] = Song Title
+char[64] = Remarks (usually the source filename)
+char[6] = ?
+
+So my extraction should take this into account.
+
+One Q: How is looping handled? Is it assumed to just loop 100% always?
+I think so.
+
+Song data is very simple: byte REG,byte DATA,uint16LE Delay - over and over
+Delay = #ticks where one tick =1/700 sec. This equates to 11 ticks per frame @60Hz.
+Note that nothing in the data specifies the ticks rate - the games just used a value,
+and different games used different values.
+
+
+
