@@ -128,7 +128,8 @@ static void vload(const char* filename, const uint8_t bank, const uint16_t addre
 #define time (*(uint8_t *) 0xa03f)
 #define rambank (*(uint8_t *) 0x0000)
 
-static void myvsync()
+/* This was needed in pre-release R39 as cc65 waitvsync() was broken...
+ * static void myvsync()
 {
 	uint8_t b,j;
 	b = rambank;
@@ -137,6 +138,8 @@ static void myvsync()
 	while (time==j) {};
 	rambank=b;
 }
+*/
+
 #endif
 
 #ifndef DEBUG
@@ -521,11 +524,7 @@ void main()
 					};
 				};
 #endif
-#ifdef R39
-				myvsync();
-#else
 				waitvsync();
-#endif
 	
 			};
 		}
