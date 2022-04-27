@@ -4,7 +4,7 @@ from PIL import Image
 import argparse
 
 parser = argparse.ArgumentParser(description="Convert indexed image formats to raw tile data.")
-parser.add_argument("-s", "--size", choices=["8x8", "8x16", "16x8", "16x16", "32x32", "320x240"], default="8x8", help="Size of individual tiles. Defaults to 8x8.")
+parser.add_argument("-s", "--size", choices=["8x8", "8x16", "16x8", "16x16", "32x32", "64x64", "64x16", "320x240"], default="8x8", help="Size of individual tiles. Defaults to 8x8.")
 parser.add_argument("-b", "--bpp", choices=["4","8"], default=4, help="bpp depth of input file. Defaults to 4bpp")
 parser.add_argument("input", help="Input file.")
 parser.add_argument("output", help="Output file.")
@@ -35,7 +35,7 @@ with open(args.output, mode="wb") as output:
     for y in range(0, img.size[1] // tile_y_size):
         y *= tile_y_size
         for x in range(0, img.size[0] // tile_x_size):
-            x *= tile_y_size
+            x *= tile_x_size
             tile = img.crop((x, y, x + tile_x_size, y + tile_y_size))
             data=bytearray(tile.getdata())
             for i in range(0,tile_x_size * tile_y_size * bpp // 8):

@@ -7,15 +7,15 @@
  * AUDIOHED.WL1 = 32bit LE pointers into AUDIOT.WL1 as "chunks"
  * AUDIOT.WL1   = the actual data file
  *
- * "chunks" are the way Id stored resources for games back then.
+ * "chunks" are the way iD stored resources for games back then.
  * Fortunately for the X16 programming community, the chunks are
  * stored uncompressed for Wolf3d - otherwise, any loader would
  * need to also implement a Huffman decoding engine. Fortunately,
  * each asset can be loaded directly from the AUDIOT file.
  * 
- * Neither file contains any info as to resource types, names, etc
+ * Neither file contains any info as to resource types, names, etc.
  * (well, the AdLib songs have some filename meta data as footers)
- * as the dev tool (MUSE) would generate a .H header with the
+ * The dev tool (MUSE) would generate a .H header with the
  * resource counts / indexes as ENUMs. The game would use those
  * ENUMs to reference the resources. I.e. nothing says "E1M3 BGM"
  * in AUDIOHED or AUDIOT - only the game itself defines which
@@ -49,11 +49,11 @@
  * ::AUDIOT.WL1::
  * 
  * The data file contains all of the various audio formats supported
- * by Wolf3d for SFX and for music. The SFX come first. Id used
+ * by Wolf3d for SFX and for music. The SFX come first. iD used
  * 3 types of audio data: PC Speaker, AdLib, and 'Digi' (PCM sfx).
  * The 'Digi' SFX are indexed in AUDIOHED.WL1, but stored in a
  * different file than AUDIOT.WL1
- * Id's tool inserts the string !ID! between each set of chunk types
+ * iD's tool inserts the string !ID! between each set of chunk types
  * but the pointers point around them.
  * 
  * The AdLib music data comes last in the file. Each music chunk begins

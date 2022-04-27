@@ -19,7 +19,7 @@
  * 
  * 
  */
-//#define R39
+#define R39
 //#define DEBUG
 
 #include <stdio.h>
@@ -59,6 +59,7 @@ uint16_t delay, i;
 uint16_t oplfreq[8]; // shadow regs for the OPL frequencies
 
 uint8_t debug = 0;
+uint8_t fracframe = 0;
 
 // assuming that channel 0 is unused in IMF music
 // produced by Id Software, as they usu. reserved that
@@ -496,8 +497,11 @@ void main()
 		if (delay>0)
 		{
 			delay--;
-			if(++perframe == 12)
+			++perframe;
+			if(((perframe == 11) && (fracframe!=2)) || (perframe>11))
 			{
+				fracframe = (fracframe+1) % 3;
+				
 				perframe=0;
 				// draw little arrows to show channel activity....
 #ifdef DEBUG				
