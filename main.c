@@ -58,6 +58,8 @@ uint8_t oplkeys;     // shadow the KeyON bits for the 8 usable voices
 uint16_t delay, i;
 uint16_t oplfreq[8]; // shadow regs for the OPL frequencies
 
+void wait();	// emits a 'WAI' instruction to wait for next IRQ.
+
 uint8_t debug = 0;
 uint8_t fracframe = 0;
 
@@ -524,7 +526,8 @@ void main()
 					};
 				};
 #endif
-				waitvsync();
+				//waitvsync();
+				wait();
 	
 			};
 		}
@@ -541,7 +544,7 @@ void main()
 			}
 			opl2ym(reg,val);
 		}
-			
+
 	};
 }
 

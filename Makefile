@@ -15,7 +15,7 @@ all: $(TARGET) TITLE.BIN PAL.BIN
 	@echo "Enjoy the demo."
 
 $(TARGET): $(ALL_C) song.h ymlookup.h
-	cl65 -t cx16 -O -o $(TARGET) $(ALL_C)
+	cl65 -t cx16 -O -o $(TARGET) $(ALL_C) wait.asm
 
 TITLE.BIN: $(RES)/wolf3dtitle.png
 	$(imgtool) -s 320x240 -b 8 $< $@
