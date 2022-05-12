@@ -1,23 +1,23 @@
 /*
  * main.c
- * 
+ *
  * Copyright 2021 Barry Yost <thatguy@zerobyte.org>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301, USA.
- * 
- * 
+ *
+ *
  */
 #define R39
 //#define DEBUG
@@ -77,13 +77,13 @@ const uint8_t YMvoice[32] = { // maps OPL operators onto OPM voices
 	2, 3, 4, 2, 3, 4, 0xff, 0xff,
 	5, 6, 7, 5, 6, 7, 0xff, 0xff,
 	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff
-};	
+};
 
 void ymwrite(uint8_t reg, uint8_t data)
 {
 //	if (debug)
 //		cprintf("ymwrite: 0x%02x <-- 0x%02x\n\r",reg,data);
-	while (YM.reg && 0x80) { }; // wait for busy flag to be clear
+	while (YM.reg & 0x80) { }; // wait for busy flag to be clear
 	YM.reg = reg;
 	YM.dat = data;
 };
@@ -91,7 +91,7 @@ void ymwrite(uint8_t reg, uint8_t data)
 void YMtestpatch()
 {
 	// load the YM with the patches from my STARDUST.PRG demo
-	
+
 	uint8_t o,r,v;
 
 	volatile const uint8_t val[4][6] = {
@@ -100,7 +100,7 @@ void YMtestpatch()
 		{0x31,0x08,0x1f,0x09,0x00,0xff},
 		{0x30,0x24,0x1f,0x09,0x00,0xff}
 	};
-	
+
 	for (v=0 ; v<8 ; v++)
 	{
 		ymwrite	(0x20+v,0xe4);
@@ -151,15 +151,15 @@ static void setBG()
 	// set display to 320x240
 	VERA.display.hscale		= 64;
 	VERA.display.vscale		= 64;
-	
+
 	VERA.layer0.config		= 0x07; // MapH&W=0,Bitmap=1,depth=3
 	VERA.layer0.hscroll		= 0;    // sets palette offset in bitmap mode
 	VERA.layer0.tilebase	= 0x00;
 	vload("pal.bin",1,0xfa00);
 	vload("title.bin",0,0x0000);
 	VERA.display.video		= 0x11; // hi-nib=layer0 ena, lo=VGA output
-	
-	
+
+
 }
 #endif
 
@@ -169,14 +169,14 @@ int8_t opl2ym (unsigned char reg, unsigned char data)
 	 * equivalent YM commands (where possible) and also does a few
 	 * tricks to simulate behaviors that aren't 1:1 feature equivalent
 	 * such as the "no-sustain" mode of OPL.
-	 * 
+	 *
 	 * This code could be tightened up to reduce the number of writes
 	 * to the YM, but as this is just a demo, speed is not of the
 	 * essence, and it might be faster anyway to just blindly dump the
 	 * translations into the YM w/o checking whether they're redundant
 	 * or not. Only the Freq/KeyON registers are checked like this.
 	 */
-	 
+
 	uint8_t adv;       // AdLib voice #
 	uint8_t op, ch, s; // YM Operator, YM Channel, Shadow Register indx.
 	uint8_t key;	   // New state of OPL keyON flag (if 0xb0 written)
@@ -220,7 +220,7 @@ int8_t opl2ym (unsigned char reg, unsigned char data)
 		};
 		return(0);
 	};
-	
+
 	// By now, the register is one of the per-op/per-channel registers...
 	// only one of these interpretations is going to be valid, depending
 	// on which register group is being written to, but go ahead
@@ -236,7 +236,7 @@ int8_t opl2ym (unsigned char reg, unsigned char data)
 	  cprintf(" - op %02x\n\r - ch %02x\n\r",op,ch);
 	  cprintf(" -adv %02x\n\r",adv);
 	};
-	
+
 	switch (reg & 0xe0) // mask the reg to just the range values
 	{
 
@@ -246,7 +246,7 @@ int8_t opl2ym (unsigned char reg, unsigned char data)
 		{
 			if ( op == 0xff )
 				return -1;
-				
+
 			// handle bit 5 (Sus mode) 1=notes sustain, 0=no sustain
 			s = 0xc0 + op;  // 0xc0 is DT2|D2R(bits 0-5) on OPM
 			if (data & 0x20) // if bit 5 is set in the value....
@@ -260,12 +260,12 @@ int8_t opl2ym (unsigned char reg, unsigned char data)
 				YMshadow[s]=(YMshadow[s+0x20] & 0x0f) << 1;
 			}
 			ymwrite(s,YMshadow[s]);
-			
+
 			// ignore KS bit (4) for now. This effect not native to YM.
-			
+
 			// use LFO to do Vibrato effect
 			// TODO: Vibrato effects
-			
+
 			// handle bits 0-3 (MUL) - just write them to YM
 			s = 0x40 + op;
 			YMshadow[s] = (YMshadow[s] & 0xf0) | ( data & 0x0f );
@@ -324,7 +324,7 @@ int8_t opl2ym (unsigned char reg, unsigned char data)
 			}
 			if (debug)
 				cprintf("--f1=%04x k1=%02x\n\r",freq,key);
-			if ( freq != oplfreq[adv] ) 
+			if ( freq != oplfreq[adv] )
 			{
 				// convert OPL freq to OPM KS values (grrrrrr!)
 				oplfreq[adv] = freq;
@@ -335,7 +335,7 @@ int8_t opl2ym (unsigned char reg, unsigned char data)
 				s = 0x28 + adv;
 				YMshadow[s] = freq;
 				ymwrite(s,freq);
-				
+
 			};
 			if ( key != oplkeys ) { // the keyon bit changed state
 				// translate the keyon bit to the 2 OPs in the
@@ -384,7 +384,7 @@ int8_t opl2ym (unsigned char reg, unsigned char data)
 	}; // switch(reg & 0xe0)
 };
 
- 
+
 void main()
 {
 	char k[8] = {0,0,0,0,0,0,0,0};
@@ -404,7 +404,7 @@ void main()
 	YMshadow[0x25] = 0xc4;
 	YMshadow[0x26] = 0xc4;
 	YMshadow[0x27] = 0xc4;
-	
+
 	// hack - just to get some noise: put concert A in all 8 voices
 	/*
 	for (i = 0 ; i < 8 ; i++ )
@@ -412,7 +412,7 @@ void main()
 		YMshadow[0x21+4*i] = 10 + 16 * 4;
 	}
 	*/
-	
+
 	// write the YMshadow out to the real YM.
 	for (i=0 ; i < 256 ; i++ )
 	{
@@ -428,7 +428,7 @@ void main()
 	oplkeys = 0;
 
 /*
-// -------------------- debug:	
+// -------------------- debug:
 	YMtestpatch(); // set some patches we know will work....
 	for (i=0 ;  i < 8 ; i++)
 	{
@@ -439,7 +439,7 @@ void main()
 
 
 	debug = 0;
-	
+
 /* -- Debug loop that plays a note on the emulated OPL once per
  * -- keypress. Must have
 
@@ -471,16 +471,16 @@ void main()
 			opl2ym(0xb1,0x34 | ((i&0x30)>>8));
 		for (delay=0 ; delay <= 65000 ; delay++) {}
 	}
-	
+
 	while (1) {};
 */
 
 #ifndef DEBUG
 	setBG();
 #endif
-    
+
 	songpos = (uint8_t*)&song;
-	
+
 	perframe = 0;
 	delay = 0;
 	while (1)
@@ -504,10 +504,10 @@ void main()
 			if(((perframe == 11) && (fracframe!=2)) || (perframe>11))
 			{
 				fracframe = (fracframe+1) % 3;
-				
+
 				perframe=0;
 				// draw little arrows to show channel activity....
-#ifdef DEBUG				
+#ifdef DEBUG
 				clrscr();
 #ifdef R39
 				cprintf("R39\n\r");
@@ -525,7 +525,7 @@ void main()
 				};
 #endif
 				waitvsync();
-	
+
 			};
 		}
 		else
@@ -541,7 +541,6 @@ void main()
 			}
 			opl2ym(reg,val);
 		}
-			
+
 	};
 }
-
