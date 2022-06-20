@@ -19,7 +19,6 @@
  *
  *
  */
-#define R39
 //#define DEBUG
 
 #include <stdio.h>
@@ -27,11 +26,7 @@
 #include <conio.h>     // waitvsync()
 #include <cbm.h>		// VERA.xxxx macros
 #include "song.h"
-#ifdef R39
-#include "ymlookup35.h"
-#else
 #include "ymlookup.h"
-#endif
 
 struct YM2151_t {
     uint8_t reg;
@@ -43,13 +38,11 @@ struct xlate_t {
 	uint8_t base;
 	uint8_t shift;
 };
-#ifndef R39
-#define YM (*(volatile struct YM2151_t*) 0x9fe0)
-#else
 #define YM (*(volatile struct YM2151_t*) 0x9f40)
-#endif
 
 #define songend (uint8_t *)(song + sizeof(song))
+
+extern void __fastcall__ vsync(); // because cc65's keeps breaking...
 
 uint8_t YMshadow[256];
 uint8_t *songpos;
@@ -118,29 +111,17 @@ void YMtestpatch()
 static void vload(const char* filename, const uint8_t bank, const uint16_t address)
 {
 	cbm_k_setnam(filename);
-	//cbm_k_setlfs(2,1,0);  // original values from ?R32? ver. of Flappy Bird
-	//cbm_k_setlfs(0,8,0);  // this works with the emulator Host FS
 	cbm_k_setlfs(0,8,0);
 	cbm_k_load(bank+2,address); // bank+2 is a special functionality of X16 LOAD
 }
 
-#ifdef R39
-#define time (*(uint8_t *) 0xa03f)
-#define rambank (*(uint8_t *) 0x0000)
-
-/* This was needed in pre-release R39 as cc65 waitvsync() was broken...
- * static void myvsync()
+// switch to this so the graphics don't need that stupid PRG header anymore!
+static bvload(const char* filename, const uint8_t bank, const uint16_t address)
 {
-	uint8_t b,j;
-	b = rambank;
-	rambank = 0;
-	j = time;
-	while (time==j) {};
-	rambank=b;
+	cbm_k_setnam(filename);
+	cbm_k_setlfs(0,8,2);        // SA=2 denotes "headerless" mode loading
+	cbm_k_load(bank+2,address); // bank+2 is a special functionality of X16 LOAD
 }
-*/
-
-#endif
 
 #ifndef DEBUG
 static void setBG()
@@ -155,9 +136,9 @@ static void setBG()
 	VERA.layer0.config		= 0x07; // MapH&W=0,Bitmap=1,depth=3
 	VERA.layer0.hscroll		= 0;    // sets palette offset in bitmap mode
 	VERA.layer0.tilebase	= 0x00;
+  VERA.display.video		= 0x11; // hi-nib=layer0 ena, lo=VGA output
 	vload("pal.bin",1,0xfa00);
 	vload("title.bin",0,0x0000);
-	VERA.display.video		= 0x11; // hi-nib=layer0 ena, lo=VGA output
 
 
 }
@@ -509,9 +490,6 @@ void main()
 				// draw little arrows to show channel activity....
 #ifdef DEBUG
 				clrscr();
-#ifdef R39
-				cprintf("R39\n\r");
-#endif
 				for (i = 0 ; i < 8 ; i++ )
 				{
 					if (oplkeys & (0x1<<i))
@@ -524,7 +502,8 @@ void main()
 					};
 				};
 #endif
-				waitvsync();
+				//waitvsync();
+        vsync();
 
 			};
 		}

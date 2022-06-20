@@ -3,7 +3,7 @@
 
 /* Script for extracting the AdLib SFX/Music data
  * from the WL1 audio files
- * 
+ *
  * AUDIOHED.WL1 = 32bit LE pointers into AUDIOT.WL1 as "chunks"
  * AUDIOT.WL1   = the actual data file
  *
@@ -12,7 +12,7 @@
  * stored uncompressed for Wolf3d - otherwise, any loader would
  * need to also implement a Huffman decoding engine. Fortunately,
  * each asset can be loaded directly from the AUDIOT file.
- * 
+ *
  * Neither file contains any info as to resource types, names, etc.
  * (well, the AdLib songs have some filename meta data as footers)
  * The dev tool (MUSE) would generate a .H header with the
@@ -21,13 +21,13 @@
  * in AUDIOHED or AUDIOT - only the game itself defines which
  * song plays on which level / menu / etc. It uses the .H file
  * to know which offests the songs use.
- * 
+ *
  * ::AUDIOHED.WL1::
- * 
+ *
  * The header format is fairly simple, but has a twist.
  * Each pointer is a simple offset into AUDIOT.WL1 so the first one
  * points to chunk 0, the second points to chunk 1, etc....
- * 
+ *
  * Thus index(X+1)-index(X) = the size of the chunk. If size = 0,
  * Then proceed to the next index without incrementing the "chunks"
  * counter. For WL1, These "null chunks" are confusing at
@@ -36,18 +36,18 @@
  * beginning of AudioHED, it is really index 236 or something similar
  * but if you skip counting nulls, it's something like 198...
  * The game engine just starts counting at zero from whichever index
- * is the "beginning of chunks for audio type X." 
- * 
+ * is the "beginning of chunks for audio type X."
+ *
  * AUDIOWL1.H defines music = 207, and AUDIOHED index 207 happens to
  * be in the middle of a long string of null chunks. So these are
  * skipped until the first nonzero chunk is encountered, which
  * is how the numbers don't add up with the actual placement in
  * the data files.
- *  
+ *
  * The last chunk index in AUDIOHED.WL1 points to EOF(AUDIOT.WL1) + 1
  *
  * ::AUDIOT.WL1::
- * 
+ *
  * The data file contains all of the various audio formats supported
  * by Wolf3d for SFX and for music. The SFX come first. iD used
  * 3 types of audio data: PC Speaker, AdLib, and 'Digi' (PCM sfx).
@@ -55,14 +55,14 @@
  * different file than AUDIOT.WL1
  * iD's tool inserts the string !ID! between each set of chunk types
  * but the pointers point around them.
- * 
+ *
  * The AdLib music data comes last in the file. Each music chunk begins
  * with a 2-byte header (little endian) which specifies the size of
  * the audio data (not including this header). The chunk itself will
  * be a little bit larger than this because the MUSE tool also wrote
  * some information at the end of the music chunks, but it doesn't
  * get used by the game, and certainly it's not valid AdLib music.
- */ 
+ */
 
 $args = getopt('ms'); // <=========== TODO = make this do something
 
@@ -186,7 +186,7 @@ mus => array(
 		'POW_MUS' =>  9,		//
 		'SALUTE_MUS' =>  10,	//////////////////blank
 		'SEARCHN_MUS' =>  11,	//my favorite stage music
-		'SUSPENSE_MUS' =>  12,	
+		'SUSPENSE_MUS' =>  12,
 		'VICTORS_MUS' =>  13,	//////////////////blank
 		'WONDERIN_MUS' =>  14,	// menu music
 		'FUNKYOU_MUS' =>  15,	//////////////////blank
@@ -250,10 +250,11 @@ fseek($df,$thisone);
 $bytes = array_shift(unpack("v",fread($df,2)));
 if ($bytes==0) {
 	print "The " .type. " chunk " .targetname. " is blank in AUDIOT.WL1\n";
-};
+}
+else {
+	printf("chunk %s is at offset %08x and size %u bytes\n",targetname,$thisone,$bytes);
+}
 $songdata = fread($df,$bytes);
 fclose($df);
 fwrite($of,$songdata);
 fclose($of);
-
-
