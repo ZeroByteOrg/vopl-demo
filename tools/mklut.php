@@ -11,18 +11,20 @@
 // For R39, use the 3.5MHz table (name it as $note)
 
 // C#,D,D#,x,E,F,F#,x,G,G#,A,x,A#,B,C
-$note1 = array( // values for when YM2151 is at 3.5MHz
+$note = array( // values for when YM2151 is at 3.5MHz
 	277.18, 293.66, 311.13, 0,  // c# d  d#  x
 	329.63, 349.23, 369.99, 0,  // e  f  f#  x
 	392.00, 415.30, 440.00, 0,  // g  g# a   x
-	466.16, 493.88, 523.25, 0); // a# b  c   x   
+	466.16, 493.88, 523.25, 0); // a# b  c   x
 
-$note = array( // values for when YM2151 is at 4MHz
+$note1 = array( // values for when YM2151 is at 4MHz
 	311.13, 329.63, 349.23, 0,  // c# d  d#  x
 	369.99, 392.00, 415.30, 0,  // e  f  f#  x
 	440.00, 466.16, 493.88, 0,  // g  g# a   x
-	523.25, 554.37, 587.33, 0); // a# b  c   x   
-		
+	523.25, 554.37, 587.33, 0); // a# b  c   x
+
+// Magic numbers here are derived from: freq = 49716 * f-num / 2^20-block
+// These are essentially the freqs for fnum=1 at all 8 octaves.
 $f = array ( 0.047, 0.094, 0.189, 0.379, 0.758, 1.517, 3.034, 6.068 );
 
 function freq($oct,$code) {
