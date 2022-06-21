@@ -4,6 +4,7 @@ RDTIM := $FFDE
 
 .export _vsync
 .export _snooze
+.export _rdtim
 
 ;---------------------------------------------------[ _vsync ]---------------
 ; Waits for the end of the next VSYNC IRQ by repeatedly calling Kernal API
@@ -48,4 +49,11 @@ keep_waiting:
   bne :-    ; 2 + 3 * 47 = 143
   plx       ; 4
   rts       ; 6
+.endproc
+
+.code
+.proc _rdtim: near
+  jsr RDTIM
+  tya
+  rts
 .endproc

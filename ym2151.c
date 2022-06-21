@@ -14,7 +14,7 @@ void ym_write(uint8_t reg, uint8_t data)
 {
 //	if (debug)
 //		cprintf("ymwrite: 0x%02x <-- 0x%02x\n\r",reg,data);
-	while (YM.reg & 0x80) { }; // wait for busy flag to be clear
+	while (YM.dat & 0x80) { }; // wait for busy flag to be clear
 	YM.reg = reg;
 	YM.dat = data;
 };
@@ -37,7 +37,7 @@ void YMtestpatch()
 	for (v=0 ; v<8 ; v++)
 	{
     continue;
-		ym_write	(0x20+v,0xe4);
+		ym_write (0x20+v,0xe4);
 		ym_write (0x38+v,0);
 		for (o=0;o<4;o++)
 		{
@@ -58,7 +58,7 @@ void ym_init() {
     YMshadow[i]=0x00;
   }
 
-  YMtestpatch(); 
+  YMtestpatch();
   // init some basic YM stuff here..
   //
   YMshadow[0x20] = 0xc4; // L&R audio ON, Connect alg 4 (most like OPL)
@@ -73,7 +73,7 @@ void ym_init() {
   // write the YMshadow out to the real YM.
   for (i=0 ; i < 256 ; i++ ) {
     ym_write(i,YMshadow[i]);
-    YM.reg = i;
-    YM.dat = YMshadow[i];
+//    YM.reg = i;
+//    YM.dat = YMshadow[i];
   };
 }

@@ -25,7 +25,7 @@
 #include <stdint.h>
 #include <conio.h>     // waitvsync()
 #include <cbm.h>		// VERA.xxxx macros
-#include "song.h"
+//#include "song.h"
 
 #include "wolf3d_resources.h"
 
@@ -43,7 +43,7 @@ extern void __fastcall__ vsync(); // because cc65's keeps breaking...
 extern int8_t vopl_write(unsigned char reg, unsigned char data);
 extern void vopl_init();
 
-extern uint16_t load_chunk(uint8_t index, char* buffer);
+extern uint16_t load_chunk(uint8_t index, void* buffer);
 extern void build_song_index();
 
 
@@ -151,16 +151,17 @@ void main()
 	while (1) {};
 */
 
-#ifndef DEBUG
-	setBG();
-#endif
-
   //songpos = (uint8_t*)&song;
   //songend = (uint8_t *)(song + sizeof(song))
   RAM_BANK = 1;
   songpos = (uint8_t*)0xa000;
-  songend = songpos+load_chunk(CORNER_MUS,songpos);
-  
+  songend = songpos + load_chunk(WONDERIN_MUS,songpos);
+  RAM_BANK = 1;
+#ifndef DEBUG
+	setBG();
+#endif
+
+
 	perframe = 0;
 	delay = 0;
 	while (1)
@@ -215,7 +216,8 @@ void main()
 			songpos += 4;
 			if (songpos >= songend) {
 				// todo: find a way to eliminate noise during loop reset
-				songpos = (uint8_t*)&song;
+				//songpos = (uint8_t*)&song;
+        songpos = (uint8_t*)0xa000;
 			}
 			vopl_write(reg,val);
 		}

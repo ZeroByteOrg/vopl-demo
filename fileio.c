@@ -2,12 +2,17 @@
 #include <cbm.h>
 #include <stdio.h>
 #include <errno.h>
-
 #include "wolf3d_resources.h"
 
 #define LFN 2
 #define SA LFN
 #define DEVICE 8
+
+#ifdef TESTLOADER
+#include <conio.h>
+#endif
+
+
 // for cbm_read() to work properly in sequential mode, SA must = LFN.
 // furthermore, SA/LFN must be 2 or 6 to work in SEQ mode... I suspect that
 // something to do with the fact that cbm.h defines:
@@ -68,7 +73,7 @@ int8_t cx16_fseek(uint8_t channel, uint32_t offset) {
 
 int cx16_read(unsigned char lfn, void* buffer, unsigned int size) {
   int error = 0;
-
+  char* buf = (char*)buffer;
   static unsigned int bytesread;
   static int tmp;
 
@@ -78,12 +83,14 @@ int cx16_read(unsigned char lfn, void* buffer, unsigned int size) {
   bytesread = 0;
 
   while (bytesread<size && !cbm_k_readst()) {
-    tmp = macptr((size-bytesread) & 0xff, buffer);
+    tmp = macptr((size-bytesread) & 0xff, buf);
     if (tmp == -1) return -1;
     bytesread += tmp;
+    buf += tmp;
+    if (buf >= (char*)0xc000) buf -= 0x2000;
     if (cbm_k_readst() & 0xBF) break;
   }
-
+  printf("status byte = %02x\n",cbm_k_readst());
   cbm_k_clrch();
   return bytesread;
 
@@ -137,8 +144,9 @@ void build_song_index() {
   cbm_close(LFN);
 }
 
-uint16_t load_chunk(uint8_t index, char* buffer) {
+uint16_t load_chunk(uint8_t index, void* buffer) {
   uint8_t b;
+
   //char success=1; // in it to win it, baby!
   uint16_t bytesRead = 0;
 
@@ -146,6 +154,7 @@ uint16_t load_chunk(uint8_t index, char* buffer) {
   cbm_open(LFN,DEVICE,SA,AUDIOT);
   cx16_fseek(LFN,chunks.offset[index]);
   bytesRead = cx16_read(LFN,buffer,chunks.size[index]); // I bet this fails spectacularly!!!
+  //bytesRead = cbm_read(LFN,buffer,chunks.size[index]);
   RAM_BANK=b;
   return bytesRead;
 }
@@ -160,9 +169,14 @@ int main() {
     printf("%-30s : %08lx %5u bytes\n",SONGNAME[i],chunks.offset[i],chunks.size[i]);
   }
   RAM_BANK = 1;
-  printf( "\nLoaded song %s (%u bytes)\n", SONGNAME[CORNER_MUS],
-    load_chunk(CORNER_MUS,(char*)0xa000)
-  );
+  while (1) {
+    printf("loading... ");
+    printf( "\nLoaded song %s (%u bytes)\n\n", SONGNAME[CORNER_MUS],
+      load_chunk(CORNER_MUS,(char*)0xa000)
+    );
+    while(!kbhit()) {}
+    cgetc();
+  }
   return 0;
 }
 #endif
