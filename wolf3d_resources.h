@@ -37,13 +37,6 @@ enum songs {
   WARMRCH1_MUS   //////////////////blank
 };
 
-const char* SONGNAME[NUMSONGS] = {
-  "corner music", "dungeon music", "war march", "get them", "headache",
-  "hitler waltz", "introcw3?", "hors wessel lied", "nazi omi music",
-  "pow", "salute", "searching for...", "suspense", "victor",
-  "wondering", "funk you", "end level", "going aft", "pregnant (really)",
-  "ultimate", "nazi rap", "zero hour", "twelfth", "roster", "you're a hero",
-  "victory march", "war march 1"
-};
+extern const char* SONGNAME[NUMSONGS];
 
 #endif

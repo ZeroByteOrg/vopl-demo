@@ -1,17 +1,42 @@
 #include <stdint.h>
 #include <cbm.h>
 #include <stdio.h>
+#include <errno.h>
 
 #include "wolf3d_resources.h"
 
 #define LFN 2
-#define SA LFN // for cbm_read() to work properly for seekable files, SA must = LFN.
+#define SA LFN
 #define DEVICE 8
+// for cbm_read() to work properly in sequential mode, SA must = LFN.
+// furthermore, SA/LFN must be 2 or 6 to work in SEQ mode... I suspect that
+// something to do with the fact that cbm.h defines:
+//   CBM_READ=0
+//   CBM_WRITE=1
+//   CBM_SEQ=2     Note that 6 would result in bit 1 being set just as with 2.
+// The value being sent to cbm_open() may be causing it to silently inject
+// some text to the filename, such as appending ",r" | ",s" | ",p"
+
+// returns -1 if error (unsupported device/file channel) or num bytes read.
+// MACPTR can be sent num_bytes = 0 and the underlying routine will read up to
+// 512 bytes at the driver's discretion.
+// Sets STATUS byte upon exit.
+int16_t __fastcall__ macptr(uint8_t num_bytes, void* buffer);
 
 struct {
   uint32_t offset[NUMSONGS];
   uint16_t size[NUMSONGS];
 } chunks;
+
+const char* SONGNAME[NUMSONGS] = {
+  "corner music", "dungeon music", "war march", "get them", "headache",
+  "hitler waltz", "introcw3?", "hors wessel lied", "nazi omi music",
+  "pow", "salute", "searching for...", "suspense", "victor",
+  "wondering", "funk you", "end level", "going aft", "pregnant (really)",
+  "ultimate", "nazi rap", "zero hour", "twelfth", "roster", "you're a hero",
+  "victory march", "war march 1"
+};
+
 
 int8_t cx16_fseek(uint8_t channel, uint32_t offset) {
   #define SETNAM 0xFFBD
@@ -41,8 +66,31 @@ int8_t cx16_fseek(uint8_t channel, uint32_t offset) {
   // TODO: ERROR HANDLING!!!!!
 }
 
+int cx16_read(unsigned char lfn, void* buffer, unsigned int size) {
+  int error = 0;
+
+  static unsigned int bytesread;
+  static int tmp;
+
+  /* if we can't change to the inputchannel #lfn then return an error */
+  if (_oserror = cbm_k_chkin(lfn)) return -1;
+
+  bytesread = 0;
+
+  while (bytesread<size && !cbm_k_readst()) {
+    tmp = macptr((size-bytesread) & 0xff, buffer);
+    if (tmp == -1) return -1;
+    bytesread += tmp;
+    if (cbm_k_readst() & 0xBF) break;
+  }
+
+  cbm_k_clrch();
+  return bytesread;
+
+}
+
 /* to load a piece o' file, and not the whole enchillada:
-  cbm_open(LFN,DEVICE,SA*,FILENAME); // *for some reason SA must match LFN or it breaks
+  cbm_open(LFN,DEVICE,SA,FILENAME); // use LFN = SA = 2 or 6
   cx16_fseek(CHAN,OFST)
   cbm_read(CHAN,char* BUFFER, uint16_t SIZE)
    (returns bytes read)
@@ -82,16 +130,39 @@ void build_song_index() {
   for(index=0 ; index<numFound ; index++) {
     cx16_fseek(LFN,chunks.offset[index]);
     cbm_read(LFN,&chunks.size[index],sizeof(uint16_t));
+    // update offset pointer to point at the start of data
+    // and not the size-of-data U16 value.
+    if (chunks.size[index] > 0) chunks.offset[index]+=2;
   }
   cbm_close(LFN);
 }
 
+uint16_t load_chunk(uint8_t index, char* buffer) {
+  uint8_t b;
+  //char success=1; // in it to win it, baby!
+  uint16_t bytesRead = 0;
+
+  b=RAM_BANK;
+  cbm_open(LFN,DEVICE,SA,AUDIOT);
+  cx16_fseek(LFN,chunks.offset[index]);
+  bytesRead = cx16_read(LFN,buffer,chunks.size[index]); // I bet this fails spectacularly!!!
+  RAM_BANK=b;
+  return bytesRead;
+}
+
+#ifdef TESTLOADER
+// wrapper to uint test the above code. Will delete when done.
 int main() {
   uint8_t i;
-  //cbm_k_bsout(CH_M?????); // undo mixed-case mode
+  cbm_k_bsout(CH_FONT_UPPER);
   build_song_index();
   for (i=0 ; i<NUMSONGS ; i++) {
     printf("%-30s : %08lx %5u bytes\n",SONGNAME[i],chunks.offset[i],chunks.size[i]);
   }
+  RAM_BANK = 1;
+  printf( "\nLoaded song %s (%u bytes)\n", SONGNAME[CORNER_MUS],
+    load_chunk(CORNER_MUS,(char*)0xa000)
+  );
   return 0;
 }
+#endif
