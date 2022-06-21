@@ -27,6 +27,7 @@
 // 512 bytes at the driver's discretion.
 // Sets STATUS byte upon exit.
 int16_t __fastcall__ macptr(uint8_t num_bytes, void* buffer);
+extern uint32_t __fastcall__ rdtim();
 
 struct {
   uint32_t offset[NUMSONGS];
@@ -81,12 +82,27 @@ int cx16_read(unsigned char lfn, void* buffer, unsigned int size) {
   if (_oserror = cbm_k_chkin(lfn)) return -1;
 
   bytesread = 0;
-
-  while (bytesread<size && !cbm_k_readst()) {
-    tmp = macptr((size-bytesread) & 0xff, buf);
+  printf("\n");
+  while (size > 0 && !cbm_k_readst()) {
+    if (size>=256)
+      tmp = macptr(0,buf); // let MACPTR read as much as it wants
+    else
+      tmp = macptr((size), buf);
     if (tmp == -1) return -1;
     bytesread += tmp;
+    size -= tmp;
+    printf("macptr: read %3u bytes. %5u/%-5u  0x06%lx ticks\n",
+      tmp,
+      bytesread,
+      size,
+      rdtim()
+    );
     buf += tmp;
+    // wrap the buffer pointer back into the bank window
+    // if it advances above 0xbfff. Note that MACPTR did
+    // wrap banks correctly, but our calculation must match.
+    // also note that MACPTR incremented the active bank,
+    // so there is no need to do RAM_BANK++ here.
     if (buf >= (char*)0xc000) buf -= 0x2000;
     if (cbm_k_readst() & 0xBF) break;
   }

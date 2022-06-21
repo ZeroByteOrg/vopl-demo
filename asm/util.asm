@@ -6,6 +6,8 @@ RDTIM := $FFDE
 .export _snooze
 .export _rdtim
 
+.importzp sreg
+
 ;---------------------------------------------------[ _vsync ]---------------
 ; Waits for the end of the next VSYNC IRQ by repeatedly calling Kernal API
 ; RDTIM until the returned jiffies value changes.
@@ -54,6 +56,8 @@ keep_waiting:
 .code
 .proc _rdtim: near
   jsr RDTIM
-  tya
-  rts
+  sty sreg   ; .A is high byte
+  stz sreg+1 ; RDTIM is 24bit so zero out the top byte
+;  tya        ; .Y is the low byte - C expects this in A
+  rts        ; .X is the mid byte - already in the right place
 .endproc
