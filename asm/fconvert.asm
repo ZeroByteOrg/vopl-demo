@@ -35,7 +35,7 @@ block: .byte 0
   tya
   and #$03 ; A now = top 2 bits of the FNUM
   tay      ; Stash result in Y again, so that we can.....
-  ora KF   ; check for FNUM=0 and early exit if it is.
+  ora note ; check for FNUM=0 and early exit if it is.
   beq DONE
 
   ; perform log2 FNUM (integer part) by shifting to find the leftmost
