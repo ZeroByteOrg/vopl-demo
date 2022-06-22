@@ -11,7 +11,8 @@
 // set of routines in pure assembly.
 
 #include <stdint.h>
-#include <conio.h>    // for the debug-related IO
+#include <stdio.h>    // for the debug-related IO
+#include <conio.h>
 
 // in lieu of project H files, just declare the stuff we intend to use:
 extern uint8_t debug;
@@ -114,9 +115,9 @@ int8_t vopl_write (unsigned char reg, unsigned char data)
 								// OPL voice# as the index, not Oper#'s
 	adv = (reg & 0x0f);	// adv = AdLib Voice #
 	if (debug) {
-	  cprintf("\n\ropl2ym: %02x %02x\n\r",reg, data);
-	  cprintf(" - op %02x\n\r - ch %02x\n\r",op,ch);
-	  cprintf(" -adv %02x\n\r",adv);
+	  printf("\n\ropl2ym: %02x %02x\n\r",reg, data);
+	  printf(" - op %02x\n\r - ch %02x\n\r",op,ch);
+	  printf(" -adv %02x\n\r",adv);
 	};
 
 	switch (reg & 0xe0) // mask the reg to just the range values
@@ -185,7 +186,7 @@ int8_t vopl_write (unsigned char reg, unsigned char data)
 		case 0xa0: // Freq. & Keyon
 		{
 			if (debug)
-				cprintf("looking for changes to KeyON & Freq\n\r");
+				printf("looking for changes to KeyON & Freq\n\r");
 			if (adv > 8 || adv < 1) // NOP for invalid voice #s
 				return -1;
 			adv--;
@@ -193,7 +194,7 @@ int8_t vopl_write (unsigned char reg, unsigned char data)
 			freq = oplfreq[adv];
 			key  = oplkeys;
 			if (debug)
-				cprintf("--f0=%04x k0=%02x\n\r",freq,key);
+				printf("--f0=%04x k0=%02x\n\r",freq,key);
 			if (reg >= 0xb0)
 			{
 				freq = (freq & 0x00ff) | ((data & 0x1f) << 8);
@@ -205,7 +206,7 @@ int8_t vopl_write (unsigned char reg, unsigned char data)
 				freq = (freq & 0xff00) | data;
 			}
 			if (debug)
-				cprintf("--f1=%04x k1=%02x\n\r",freq,key);
+				printf("--f1=%04x k1=%02x\n\r",freq,key);
 			if ( freq != oplfreq[adv] )
 			{
 				// convert OPL freq to OPM KS values (grrrrrr!)
@@ -227,9 +228,9 @@ int8_t vopl_write (unsigned char reg, unsigned char data)
 				keyonoff |= (data & 0x20) >> 2;
 				if (debug)
 				{
-					cprintf("KeyUPDN event for voice %d\n\r",adv);
-					cprintf("--%02x\n\r",keyonoff);
-					cprintf("--YM[08] <-- %02x\n\r",keyonoff+adv);
+					printf("KeyUPDN event for voice %d\n\r",adv);
+					printf("--%02x\n\r",keyonoff);
+					printf("--YM[08] <-- %02x\n\r",keyonoff+adv);
 					while (!kbhit()) {}
 					cgetc(); // consume the keystroke
 				}
@@ -268,11 +269,14 @@ int8_t vopl_write (unsigned char reg, unsigned char data)
 
 void vopl_init() {
   uint8_t i;
+
+  printf ("initializing ym...\n");
+  ym_init();
+  printf ("ym initialized.\n");
   // initialize the OPL shadow values for freq/KeyON states
   for ( i=0 ; i < sizeof(oplfreq) ; i++)
   {
     oplfreq[i] = 0;
   }
   oplkeys = 0;
-  ym_init();
 }

@@ -58,7 +58,7 @@ void ym_init() {
     YMshadow[i]=0x00;
   }
 
-  YMtestpatch();
+  //YMtestpatch();
   // init some basic YM stuff here..
   //
   YMshadow[0x20] = 0xc4; // L&R audio ON, Connect alg 4 (most like OPL)
@@ -73,7 +73,5 @@ void ym_init() {
   // write the YMshadow out to the real YM.
   for (i=0 ; i < 256 ; i++ ) {
     ym_write(i,YMshadow[i]);
-//    YM.reg = i;
-//    YM.dat = YMshadow[i];
   };
 }

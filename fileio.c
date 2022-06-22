@@ -8,6 +8,10 @@
 #define SA LFN
 #define DEVICE 8
 
+#ifdef DEBUGMACPTR
+#include <conio.h>
+#endif
+
 #ifdef TESTLOADER
 #include <conio.h>
 #endif
@@ -34,6 +38,8 @@ struct {
   uint16_t size[NUMSONGS];
 } chunks;
 
+extern char* chunk_end;
+
 const char* SONGNAME[NUMSONGS] = {
   "corner music", "dungeon music", "war march", "get them", "headache",
   "hitler waltz", "introcw3?", "hors wessel lied", "nazi omi music",
@@ -42,7 +48,6 @@ const char* SONGNAME[NUMSONGS] = {
   "ultimate", "nazi rap", "zero hour", "twelfth", "roster", "you're a hero",
   "victory march", "war march 1"
 };
-
 
 int8_t cx16_fseek(uint8_t channel, uint32_t offset) {
   #define SETNAM 0xFFBD
@@ -84,32 +89,38 @@ int cx16_read(unsigned char lfn, void* buffer, unsigned int size) {
   bytesread = 0;
   printf("\n");
   while (size > 0 && !cbm_k_readst()) {
-    if (size>=256)
-      tmp = macptr(0,buf); // let MACPTR read as much as it wants
+    if (size>=512)
+      tmp = macptr(0,buf);  // let MACPTR read as much as it wants
+    else if (size>=256)
+      tmp = macptr(255,buf); // If size 256..512, unlimied MACPTR will read past end.
     else
       tmp = macptr((size), buf);
     if (tmp == -1) return -1;
     bytesread += tmp;
     size -= tmp;
-    printf("macptr: read %3u bytes. %5u/%-5u  0x06%lx ticks\n",
-      tmp,
-      bytesread,
-      size,
-      rdtim()
-    );
-    buf += tmp;
     // wrap the buffer pointer back into the bank window
     // if it advances above 0xbfff. Note that MACPTR did
     // wrap banks correctly, but our calculation must match.
     // also note that MACPTR incremented the active bank,
     // so there is no need to do RAM_BANK++ here.
     if (buf >= (char*)0xc000) buf -= 0x2000;
+    buf += tmp;
+#ifdef DEBUGMACPTR
+    printf("macptr: read %3d bytes. %5u/%-5u  0x%06lx ticks\n",
+      tmp,
+      bytesread,
+      size,
+      rdtim()
+    );
+    if (kbhit()) break;
+#endif
     if (cbm_k_readst() & 0xBF) break;
+    if (tmp == 0) break;
   }
   printf("status byte = %02x\n",cbm_k_readst());
   cbm_k_clrch();
+  chunk_end = (char*)buf;
   return bytesread;
-
 }
 
 /* to load a piece o' file, and not the whole enchillada:
@@ -175,9 +186,12 @@ uint16_t load_chunk(uint8_t index, void* buffer) {
   return bytesRead;
 }
 
+
 #ifdef TESTLOADER
 // wrapper to uint test the above code. Will delete when done.
+#define SONG NAZI_NOR_MUS
 int main() {
+  unsigned long t;
   uint8_t i;
   cbm_k_bsout(CH_FONT_UPPER);
   build_song_index();
@@ -187,11 +201,13 @@ int main() {
   RAM_BANK = 1;
   while (1) {
     printf("loading... ");
-    printf( "\nLoaded song %s (%u bytes)\n\n", SONGNAME[CORNER_MUS],
-      load_chunk(CORNER_MUS,(char*)0xa000)
+    t = rdtim();
+    printf( "\nloaded song %s (%u bytes)\n\n", SONGNAME[SONG],
+      load_chunk(SONG,(char*)0xa000)
     );
+    printf("elapsed ticks = %lu\n",t);
     while(!kbhit()) {}
-    cgetc();
+    if(cgetc()=='q') break;
   }
   return 0;
 }
