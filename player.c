@@ -3,15 +3,26 @@
 #include "player.h"
 #include "vopl.h"
 
+#ifdef DEBUG
+#include <conio.h>
+#endif
+
 #define IRQVECTOR (*(uint16_t*)0x0314)
 #define VIA_IRQ_DISABLE_T1 0x40
 #define VIA_IRQ_ENABLE_T1  0xC0
 
 void player_advance();
+extern char* chunk_end;
 
-
+// music state variables
 musicframe* songPtr;
+musicframe* songStart;
 musicframe* songEOF;
+uint8_t songStartBank;
+uint8_t songEndbank;
+uint8_t songBank;
+
+// holds the IRQ vector we found when installing the player IRQ.
 uint16_t sysIRQ;
 
 musicframe NULLSONG = { 5, 0, 0xffff }; // NOP and wait 0xffff
@@ -25,8 +36,8 @@ char player_init() {
   VIA2.ier = VIA_IRQ_DISABLE_T1;
   VIA2.acr &= 0x3F; // mask off the T1 control bits from current value
   VIA2.acr |= 0x40; // set the T1 free-run mode bit.
-  VIA2.t1l_lo = (8000000/700) & 0xFF;
-  VIA2.t1l_hi = (((8000000/700) >> 8) & 0xFF);
+  VIA2.t1_lo = (8000000/700) & 0xFF;
+  VIA2.t1_hi = (((8000000/700) >> 8) & 0xFF);
   playing = 0;
   // install IRQ handler if not already installed
   if (IRQVECTOR != (uint16_t)&irqhandler) {
@@ -36,8 +47,12 @@ char player_init() {
     __asm__("cli");
   }
   printf ("survived setting up the irq\n");
-  songPtr = &NULLSONG;
+  songStart = &NULLSONG;
   songEOF = &NULLSONG+1;
+  songStartBank = 1; // irrelevent for NULLSONG, but set to be thorough.
+  songEndbank = 1;   // ditto.
+  songPtr = songStart;
+  songBank = songStartBank;
   printf ("initializing vopl...\n");
   vopl_init();
   printf ("vopl initialized.\n");
@@ -58,37 +73,83 @@ void irqhandler() {
 
 }
 
+#define PAUSE \
+while(!kbhit()) {} \
+cgetc();
+
 void player_advance() {
+  static uint8_t b;
   if (playing) {
+    b = RAM_BANK;
+    RAM_BANK = songBank;
+
     while (delay==0) {
-      delay = songPtr->delay;
+#ifdef DEBUG
+      printf("%02x.%04x: ",RAM_BANK,songPtr);
+      printf(" r%02x v%02x d%04x \n",songPtr->reg, songPtr->val, songPtr->delay);
+      PAUSE
+#endif
+      // write the current frame out to VOPL and set the delay.
       vopl_write(songPtr->reg, songPtr->val);
-      if (++songPtr == songEOF) {
-        songPtr = &SONG_START;
-        RAM_BANK = SONG_BANK;
-      }
-      else if (*(uint16_t*)songPtr > 0xC000) {
-        songPtr = (musicframe*) 0xA000;
+      delay = songPtr->delay;
+      // next frame....
+      ++songPtr;
+      // check for HiRam bank wrap
+      if((uint16_t*)songPtr >= 0xC000) {
+        songPtr -= 0x2000/sizeof(musicframe);
         ++RAM_BANK;
+        ++songBank;
+      }
+      // see if we are at the end of the song... If so, loop to beginning.
+      if ((RAM_BANK >= songEndbank) && (songPtr >= songEOF)) {
+        songPtr = songStart;
+        songBank = songStartBank;
+        RAM_BANK = songBank;
       }
     }
+#ifdef DEBUG
+    printf ("\n -- delay %u --\n",delay);
+    PAUSE
+#endif
     --delay;
+    RAM_BANK = b;
   }
 }
 
-void player_start() {
-    RAM_BANK = SONG_BANK;
-    songPtr = &SONG_START;
+void player_start(uint8_t s_bank, void* s_addr, uint8_t e_bank, void* e_addr) {
+    songStart = (musicframe*)s_addr;
+    songStartBank = s_bank;
+    songEOF = (musicframe*)e_addr;
+    songEndbank = e_bank;
+
+    songPtr  = songStart;
+    songBank = songStartBank;
+
     VIA2.ier = VIA_IRQ_ENABLE_T1;
     playing = 1;
+    VIA2.t1_lo = (8000000/700) & 0xFF;
+    VIA2.t1_hi = (((8000000/700) >> 8) & 0xFF);
 }
 
 void player_stop() {
   VIA2.ier = VIA_IRQ_DISABLE_T1;
-  songPtr = &NULLSONG;
+  if(playing) vopl_init(); // sledgehammer
+  playing = 0;
+  songStart = &NULLSONG;
+  songStartBank = 1;
+  songEOF = &NULLSONG;
+  songEOF++;
+  songEndbank = 1;
+  songPtr = songStart;
+  songBank = songStartBank;
   RAM_BANK = SONG_BANK;
-  if(playing) {
-    playing = 0;
-    vopl_init(); // sledgehammer
+}
+
+void player_shutdown() {
+  player_stop();
+  if (IRQVECTOR == (uint16_t)&irqhandler) {
+    __asm__ ("sei");
+    IRQVECTOR = sysIRQ;
+    __asm__ ("cli");
   }
 }

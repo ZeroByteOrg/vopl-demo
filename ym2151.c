@@ -55,7 +55,13 @@ void ym_init() {
   // init the YM shadow registers and use them to init the YM chip
   for ( i=0 ; i < 256 ; i++)
   {
-    YMshadow[i]=0x00;
+    if ((i & 0xE0) == 0x60) {
+      YMshadow[i]=0x7f; // TL 0x7F = off
+    }
+    else if (i==0x1a)
+      YMshadow[i]=0x80; // fake register for PMD value to be stored separately
+    else
+      YMshadow[i]=0x00;
   }
 
   //YMtestpatch();
@@ -70,8 +76,17 @@ void ym_init() {
   YMshadow[0x26] = 0xc4;
   YMshadow[0x27] = 0xc4;
 
+  // release all 8 voices
+  for (i=0; i<8 ; i++) {
+    ym_write(0xe0+i,0x0f);
+    ym_write(0xe8+i,0x0f);
+    ym_write(0xf0+i,0x0f);
+    ym_write(0xf8+i,0x0f);
+    ym_write(0x08,i);
+  }
   // write the YMshadow out to the real YM.
   for (i=0 ; i < 256 ; i++ ) {
-    ym_write(i,YMshadow[i]);
+    if (i==0x1a) ym_write(0x1a,0x80);
+    else ym_write(i,YMshadow[i]);
   };
 }

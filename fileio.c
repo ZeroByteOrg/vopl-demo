@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include "wolf3d_resources.h"
+#include "fileio.h"
 
 #define LFN 2
 #define SA LFN
@@ -30,15 +31,16 @@
 // MACPTR can be sent num_bytes = 0 and the underlying routine will read up to
 // 512 bytes at the driver's discretion.
 // Sets STATUS byte upon exit.
+
 int16_t __fastcall__ macptr(uint8_t num_bytes, void* buffer);
 extern uint32_t __fastcall__ rdtim();
+
+chunk_end_t chunkEnd = { (void*)0xa000, 1, 0 };
 
 struct {
   uint32_t offset[NUMSONGS];
   uint16_t size[NUMSONGS];
 } chunks;
-
-extern char* chunk_end;
 
 const char* SONGNAME[NUMSONGS] = {
   "corner music", "dungeon music", "war march", "get them", "headache",
@@ -77,7 +79,7 @@ int8_t cx16_fseek(uint8_t channel, uint32_t offset) {
   // TODO: ERROR HANDLING!!!!!
 }
 
-int cx16_read(unsigned char lfn, void* buffer, unsigned int size) {
+uint8_t cx16_read(unsigned char lfn, void* buffer, unsigned int size) {
   int error = 0;
   char* buf = (char*)buffer;
   static unsigned int bytesread;
@@ -103,8 +105,8 @@ int cx16_read(unsigned char lfn, void* buffer, unsigned int size) {
     // wrap banks correctly, but our calculation must match.
     // also note that MACPTR incremented the active bank,
     // so there is no need to do RAM_BANK++ here.
-    if (buf >= (char*)0xc000) buf -= 0x2000;
     buf += tmp;
+    if (buf >= (char*)0xc000) buf -= 0x2000;
 #ifdef DEBUGMACPTR
     printf("macptr: read %3d bytes. %5u/%-5u  0x%06lx ticks\n",
       tmp,
@@ -119,8 +121,10 @@ int cx16_read(unsigned char lfn, void* buffer, unsigned int size) {
   }
   printf("status byte = %02x\n",cbm_k_readst());
   cbm_k_clrch();
-  chunk_end = (char*)buf;
-  return bytesread;
+  chunkEnd.addr = (void*)buf;
+  chunkEnd.bank = RAM_BANK;
+  chunkEnd.ok   = (size==0);
+  return (size==0);
 }
 
 /* to load a piece o' file, and not the whole enchillada:
@@ -171,19 +175,17 @@ void build_song_index() {
   cbm_close(LFN);
 }
 
-uint16_t load_chunk(uint8_t index, void* buffer) {
+uint8_t load_chunk(uint8_t index, void* buffer) {
   uint8_t b;
-
-  //char success=1; // in it to win it, baby!
-  uint16_t bytesRead = 0;
 
   b=RAM_BANK;
   cbm_open(LFN,DEVICE,SA,AUDIOT);
   cx16_fseek(LFN,chunks.offset[index]);
-  bytesRead = cx16_read(LFN,buffer,chunks.size[index]); // I bet this fails spectacularly!!!
+  cx16_read(LFN,buffer,chunks.size[index]);
+  cbm_close(LFN);
   //bytesRead = cbm_read(LFN,buffer,chunks.size[index]);
   RAM_BANK=b;
-  return bytesRead;
+  return chunkEnd.ok;
 }
 
 

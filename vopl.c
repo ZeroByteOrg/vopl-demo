@@ -270,9 +270,7 @@ int8_t vopl_write (unsigned char reg, unsigned char data)
 void vopl_init() {
   uint8_t i;
 
-  printf ("initializing ym...\n");
   ym_init();
-  printf ("ym initialized.\n");
   // initialize the OPL shadow values for freq/KeyON states
   for ( i=0 ; i < sizeof(oplfreq) ; i++)
   {

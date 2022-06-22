@@ -15,9 +15,11 @@ typedef struct frame_s {
 #define SONG_BANK 1
 
 extern void irqhandler();
+extern void player_advance();
 extern char player_init();
-extern void player_start();
+extern void player_start(uint8_t s_bank, void* s_addr, uint8_t e_bank, void* e_addr);
 extern void player_stop();
+extern void player_shutdown();
 extern char player_loadsong(unsigned char id);
 
 extern musicframe* songEOF;

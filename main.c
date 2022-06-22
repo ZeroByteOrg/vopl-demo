@@ -26,16 +26,18 @@
 #include <conio.h>     // waitvsync()
 #include <cbm.h>		// VERA.xxxx macros
 #include "player.h"
+#include "fileio.h"
 #include "wolf3d_resources.h"
-
-extern uint16_t load_chunk(uint8_t index, void* buffer);
-extern void build_song_index();
 
 uint16_t i;
 
+#ifndef DEBUG
 uint8_t debug = 0;
+#else
+uint8_t debug = 1;
+#endif
 
-musicframe chunk_end;
+extern void __fastcall__ vsync();
 
 static void vload(const char* filename, const uint8_t bank, const uint16_t address)
 {
@@ -44,6 +46,7 @@ static void vload(const char* filename, const uint8_t bank, const uint16_t addre
 	cbm_k_load(bank+2,address); // bank+2 is a special functionality of X16 LOAD
 }
 
+#if(0)
 // switch to this so the graphics don't need that stupid PRG header anymore!
 static void bvload(const char* filename, const uint8_t bank, const uint16_t address)
 {
@@ -51,6 +54,7 @@ static void bvload(const char* filename, const uint8_t bank, const uint16_t addr
 	cbm_k_setlfs(0,8,2);        // SA=2 denotes "headerless" mode loading
 	cbm_k_load(bank+2,address); // bank+2 is a special functionality of X16 LOAD
 }
+#endif
 
 #ifndef DEBUG
 static void setBG()
@@ -73,9 +77,15 @@ static void setBG()
 }
 #endif
 
+char songlist[11]={
+  NAZI_NOR_MUS, WONDERIN_MUS, GETTHEM_MUS, ENDLEVEL_MUS, SEARCHN_MUS,
+  CORNER_MUS, GETOUT_MUS, POW_MUS, SUSPENSE_MUS, URAHERO_MUS, ROSTER_MUS
+};
+
 
 void main()
 {
+  char active_song = 1;
 	char k[8] = {0,0,0,0,0,0,0,0};
 
 	player_init();
@@ -86,13 +96,40 @@ void main()
 
   RAM_BANK = 1;
 	printf("loading song...");
-  load_chunk(SEARCHN_MUS,(void*)0xa000);
-	songEOF = chunk_end;
+  load_chunk(songlist[active_song],(void*)0xa000);
 	printf(" done\n");
   RAM_BANK = 1;
+  if (chunkEnd.ok)
+    player_start(1,(void*)0xa000,chunkEnd.bank,(void*)chunkEnd.addr);
 #ifndef DEBUG
 	setBG();
 #endif
-	player_start();
-	while (1) {}
+  while(kbhit()) {cgetc();}
+	while (!kbhit()) {
+#ifdef DEBUG
+    vsync();
+    printf("advancing the music\n");
+    player_advance();
+    player_advance();
+    player_advance();
+    player_advance();
+    player_advance();
+    player_advance();
+    player_advance();
+    player_advance();
+    player_advance();
+    player_advance();
+    player_advance();
+#else
+    if(kbhit()) {
+      cgetc();
+      if(++active_song > sizeof(songlist)) active_song = 0;
+      player_stop();
+      load_chunk(songlist[active_song],(void*)0xa000);
+      if(chunkEnd.ok)
+        player_start(1,(void*)0xa000,chunkEnd.bank,(void*)chunkEnd.addr);
+    }
+#endif
+  }
+  player_shutdown();
 }

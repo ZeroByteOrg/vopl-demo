@@ -16,7 +16,7 @@ all: $(TARGET) TITLE.BIN PAL.BIN
 	@echo "Enjoy the demo."
 
 $(TARGET): $(ALL_C) $(ASM_SRCS) song.h ymlookup.h
-	cl65 -t cx16 -O -DDEBUGMACPTR -g -Ln vopldemo.sym -o $(TARGET) $(ALL_C) $(ASM_SRCS)
+	cl65 -t cx16 -O -g -Ln vopldemo.sym -o $(TARGET) $(ALL_C) $(ASM_SRCS)
 
 TITLE.BIN: $(RES)/wolf3dtitle.png
 	$(imgtool) -s 320x240 -b 8 $< $@
