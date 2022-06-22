@@ -54,6 +54,9 @@ load: all
 run: all
 	x16emu -sdcard sdcard.img -prg $(TARGET) -run
 
+runbox16: all
+	box16 -sdcard sdcard.img -prg $(TARGET) -run
+
 sdcard: all
 # You need to have the following in ~/.mtoolsrc for this to work:
 # mtools_skip_check=1

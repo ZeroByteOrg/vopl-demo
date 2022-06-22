@@ -31,6 +31,10 @@ musicframe NULLSONG = { 5, 0, 0xffff }; // NOP and wait 0xffff
 uint16_t delay = 0;
 uint8_t playing = 0;
 
+char player_isplaying() {
+  return playing;
+}
+
 char player_init() {
   // Configure VIA2 to generate 700hz signal for music player
   VIA2.ier = VIA_IRQ_DISABLE_T1;
@@ -95,7 +99,7 @@ void player_advance() {
       // next frame....
       ++songPtr;
       // check for HiRam bank wrap
-      if((uint16_t*)songPtr >= 0xC000) {
+      if((uint16_t)songPtr >= 0xC000) {
         songPtr -= 0x2000/sizeof(musicframe);
         ++RAM_BANK;
         ++songBank;

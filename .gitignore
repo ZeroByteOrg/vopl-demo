@@ -1,0 +1,14 @@
+imgui.ini
+build/*
+*.bak
+*.map
+*.sym
+*.o
+*.s
+tmp
+.~lock.*
+*.PRG
+*.img
+now
+pdat
+build

@@ -23,8 +23,9 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <conio.h>     // waitvsync()
+#include <conio.h>
 #include <cbm.h>		// VERA.xxxx macros
+#include <errno.h>
 #include "player.h"
 #include "fileio.h"
 #include "wolf3d_resources.h"
@@ -56,56 +57,61 @@ static void bvload(const char* filename, const uint8_t bank, const uint16_t addr
 }
 #endif
 
-#ifndef DEBUG
 static void setBG()
 {
+	//int i;
 
-//#define _Vbgbase (((_0x4000 >> 2)|(_1 << 14)) & 0xffff)
+	textcolor(COLOR_GRAY2);  // this color works well for transparent debug overlay
+	videomode(VIDEOMODE_40x30);
 
-	// set display to 320x240
-	VERA.display.hscale		= 64;
-	VERA.display.vscale		= 64;
 
 	VERA.layer0.config		= 0x07; // MapH&W=0,Bitmap=1,depth=3
 	VERA.layer0.hscroll		= 0;    // sets palette offset in bitmap mode
 	VERA.layer0.tilebase	= 0x00;
-  VERA.display.video		= 0x11; // hi-nib=layer0 ena, lo=VGA output
+	VERA.layer1.config   |= 0x08; // enable 256-color text mode
+  VERA.display.video		= 0x31; // hi-nib=layer0 ena, lo=VGA output
+
+	gotoxy (15,15);
+	cprintf ("loading");
 	vload("pal.bin",1,0xfa00);
 	vload("title.bin",0,0x0000);
-
+	clrscr();
+	gotoxy(0,29);
 
 }
-#endif
 
 char songlist[11]={
   NAZI_NOR_MUS, WONDERIN_MUS, GETTHEM_MUS, ENDLEVEL_MUS, SEARCHN_MUS,
-  CORNER_MUS, GETOUT_MUS, POW_MUS, SUSPENSE_MUS, URAHERO_MUS, ROSTER_MUS
+  POW_MUS, SUSPENSE_MUS, GETOUT_MUS, URAHERO_MUS, ROSTER_MUS, CORNER_MUS,
 };
 
+void play_song(char id) {
+	if (id > sizeof(songlist)) return;
+	player_stop();
+	printf("Loading song %d: \"%s\"",id,SONGNAME[songlist[id]]);
+	load_chunk(songlist[id],(void*)0xa000);
+	printf("%u bytes loaded. Done\n\n",chunkEnd.bytes);
+	if(chunkEnd.ok)
+		player_start(1,(void*)0xa000,chunkEnd.bank,(void*)chunkEnd.addr);
+	else printf ("An error occured. Status byte = %02x\n",_oserror);
+}
 
 void main()
 {
-  char active_song = 1;
+  char active_song = 0;
 	char k[8] = {0,0,0,0,0,0,0,0};
+	char key;
 
 	player_init();
 	printf("player initialized.\n");
   build_song_index();
 	printf("song index built.\n");
 	debug = 0;
-
-  RAM_BANK = 1;
-	printf("loading song...");
-  load_chunk(songlist[active_song],(void*)0xa000);
-	printf(" done\n");
-  RAM_BANK = 1;
-  if (chunkEnd.ok)
-    player_start(1,(void*)0xa000,chunkEnd.bank,(void*)chunkEnd.addr);
-#ifndef DEBUG
+	play_song(active_song);
 	setBG();
-#endif
-  while(kbhit()) {cgetc();}
-	while (!kbhit()) {
+  while(kbhit()) {cgetc();} // clear the input buffer.
+	while (1) {
+
 #ifdef DEBUG
     vsync();
     printf("advancing the music\n");
@@ -122,14 +128,58 @@ void main()
     player_advance();
 #else
     if(kbhit()) {
-      cgetc();
-      if(++active_song > sizeof(songlist)) active_song = 0;
-      player_stop();
-      load_chunk(songlist[active_song],(void*)0xa000);
-      if(chunkEnd.ok)
-        player_start(1,(void*)0xa000,chunkEnd.bank,(void*)chunkEnd.addr);
+      key=cgetc();
+			if (key=='q') break;
+			switch (key) {
+				case CH_F1:
+					VERA.display.video ^= (1<<5); // toggle debug overlay
+					break;
+				case CH_ESC:
+					break;
+				case CH_CURS_UP:
+					// speed up the music
+				case CH_CURS_DOWN:
+					// slow down the music
+					break;
+				case CH_CURS_LEFT:
+					if (--active_song >=sizeof(songlist)) active_song = sizeof(songlist)-1;
+					play_song(active_song);
+					break;
+				case CH_CURS_RIGHT:
+				case ' ':
+					if(++active_song >= sizeof(songlist)) active_song = 0;
+					play_song(active_song);
+					break;
+				case CH_ENTER:
+					if (player_isplaying()) {
+						player_stop();
+						printf("Music stopped.\n");
+					}
+					else
+						play_song(active_song);
+
+			}
     }
 #endif
   }
+	VERA.display.video |= (1<<5);
+	if (player_isplaying()) {
+		while (kbhit()) cgetc(); // consume any buffered key presses.
+		printf("Leave the music running (y/n)?");
+		while (1) {
+			key=cgetc();
+			switch (key) {
+				case 'y':
+				case 'Y':
+					printf("\nUse SYS $%04x to stop the music later.\n",(uint16_t)&player_shutdown);
+					return;
+				case 'n':
+				case 'N':
+				case CH_ESC:
+					player_shutdown();
+					return;
+			}
+		}
+	}
   player_shutdown();
 }

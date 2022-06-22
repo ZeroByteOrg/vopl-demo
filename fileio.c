@@ -42,15 +42,6 @@ struct {
   uint16_t size[NUMSONGS];
 } chunks;
 
-const char* SONGNAME[NUMSONGS] = {
-  "corner music", "dungeon music", "war march", "get them", "headache",
-  "hitler waltz", "introcw3?", "hors wessel lied", "nazi omi music",
-  "pow", "salute", "searching for...", "suspense", "victor",
-  "wondering", "funk you", "end level", "going aft", "pregnant (really)",
-  "ultimate", "nazi rap", "zero hour", "twelfth", "roster", "you're a hero",
-  "victory march", "war march 1"
-};
-
 int8_t cx16_fseek(uint8_t channel, uint32_t offset) {
   #define SETNAM 0xFFBD
   static struct cmd {
@@ -119,11 +110,11 @@ uint8_t cx16_read(unsigned char lfn, void* buffer, unsigned int size) {
     if (cbm_k_readst() & 0xBF) break;
     if (tmp == 0) break;
   }
-  printf("status byte = %02x\n",cbm_k_readst());
   cbm_k_clrch();
-  chunkEnd.addr = (void*)buf;
-  chunkEnd.bank = RAM_BANK;
-  chunkEnd.ok   = (size==0);
+  chunkEnd.addr  = (void*)buf;
+  chunkEnd.bank  = RAM_BANK;
+  chunkEnd.ok    = (size==0);
+  chunkEnd.bytes = bytesread;
   return (size==0);
 }
 

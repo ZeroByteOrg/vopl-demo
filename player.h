@@ -15,6 +15,7 @@ typedef struct frame_s {
 #define SONG_BANK 1
 
 extern void irqhandler();
+extern char player_isplaying();
 extern void player_advance();
 extern char player_init();
 extern void player_start(uint8_t s_bank, void* s_addr, uint8_t e_bank, void* e_addr);
