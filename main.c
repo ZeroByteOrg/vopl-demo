@@ -96,6 +96,16 @@ void play_song(char id) {
 	else printf ("An error occured. Status byte = %02x\n",_oserror);
 }
 
+void printhelp() {
+	printf("Debug Console Commands:\n");
+	printf("CSR R: Next Song\n");
+	printf("CSR L: Previous Song\n");
+	printf("ENTER: Stop/Start music\n");
+	printf("   F1: toggle console visibility\n");
+	printf("    C: clear the debug console\n");
+	printf("    Q: Quit\n\n");
+}
+
 void main()
 {
   char active_song = 0;
@@ -110,6 +120,12 @@ void main()
 	play_song(active_song);
 	setBG();
   while(kbhit()) {cgetc();} // clear the input buffer.
+	VERA.display.video &= ~(1<<5);
+	printf("Loading song %d: \"%s\"\n",active_song,SONGNAME[songlist[active_song]]);
+	printf("%u bytes loaded. Done\n\n",chunkEnd.bytes);
+	printf("Debug console ready.\n");
+	printf("Press ? for help\n");
+	VERA.display.video |= (1<<5);
 	while (1) {
 
 #ifdef DEBUG
@@ -133,6 +149,18 @@ void main()
 			switch (key) {
 				case CH_F1:
 					VERA.display.video ^= (1<<5); // toggle debug overlay
+					break;
+				case '?':
+					VERA.display.video |= (1<<5); // make sure the overlay is visible
+					printhelp();
+					break;
+				case 'c':
+				case 'C':
+					if (VERA.display.video & (1<<5)) {
+						clrscr();
+						gotoxy(0,29);
+						printf("Debug console ready.\n");
+					}
 					break;
 				case CH_ESC:
 					break;
