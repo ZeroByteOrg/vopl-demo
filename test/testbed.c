@@ -36,7 +36,7 @@ int main() {
 			blockfnum = prompt("enter f-number: ");
 			if (blockfnum >= 1024) printf("fnum must be 0-1023\n");
 		}
-		blockfnum |= block << 10;
+		blockfnum = (blockfnum/2) | (block << 10);
 		blockfnum = fconvert(blockfnum);
 		printf ("\nthat gives an opm equivalent kc:%02x kf:%02x\n",blockfnum&0xff,blockfnum>>8);
 	}

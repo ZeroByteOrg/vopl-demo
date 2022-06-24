@@ -5,6 +5,13 @@
   // and compare with Natt's formula's results - to verify the
   // implementation in fconvert.asm
 
+  $notes = array(
+  	277.18, 293.66, 311.13, // c# d  d#
+  	329.63, 349.23, 369.99, // e  f  f#
+  	392.00, 415.30, 440.00, // g  g# a
+  	466.16, 493.88, 523.25  // a# b  c
+  );
+
   $flut = array( // OPM keycodes for 3.5MHz clock rate
    array(  // block=0
     0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
@@ -1048,15 +1055,26 @@
    )
   );
 
-if (!isset($argv[2])) { print "usage: $argv[0] <bloc> <fnum>\n"; exit(1);}
-$bloc = $argv[1];
-$fnum = $argv[2];
+// $freq = ($opnclock * 2^($oct-1) * $fnum) / ( 144 * (1 << 20));
+// thus: freq = 0.0237063897981 + pow(2,$oct-1) * fnum
+//     : fnum * (2^($oct-4) - 1) = freq /
 
-$kc = $flut[$bloc][$fnum];
-$kf = 0;
-printf("The LUT gives      :  KC=%02x KF=%02x\n",$kc,$kf);
-$val = log($fnum,2) + $bloc-8.5132730792261496510681735326167;
-$val *= 12;
-$kc = floor($val);
-$kf = floor(($val-$kc)*256);
-printf("Nat's formula gives:  KC=%02x KF=%02x\n",$kc,$kf);
+
+//if (!isset($argv[2])) { print "usage: $argv[0] <bloc> <fnum>\n"; exit(1);}
+$bloc = 4;
+$x = 12 * log(220,2);
+printf("Midi note = %x\n",floor($x));
+printf("%19sLUT    NAT\n","");
+foreach (array(617,653,692,733,777,823,872,924,979,1037,1099,1164) as $fnum) {
+  $fnum = $fnum>>1;
+  $kc = $flut[$bloc][$fnum];
+  $kf = 0;
+  printf("bloc:%d fnum:%5d: ",$bloc,$fnum);
+  printf("%02x %02x  ",$kc,$kf);
+  $val = log($fnum,2) + $bloc-8.5132730792261496510681735326167;
+  $val *= 12;
+  $kc = floor($val);
+  $kf = floor(($val-$kc)*256);
+  //$kc = floor($kc * 4 / 3);
+  printf("%02x %02d\n",floor($kc*4/3),$kf & 0xfc);
+}

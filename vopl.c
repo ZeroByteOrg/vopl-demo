@@ -20,12 +20,14 @@ extern uint8_t debug;
 extern uint8_t YMshadow[256]; // shadow the YM state
 extern void ym_init();
 extern void ym_write(uint8_t reg, uint8_t data);
+extern uint16_t __fastcall__ fconvert(uint16_t blockfnum);
 
 uint8_t oplkeys;       // shadow the KeyON bits for the 8 usable voices
 uint16_t oplfreq[8];   // shadow regs for the OPL frequencies
 
-#include "ymlookup.h" // contains a definition, so make sure this
+//#include "ymlookup.h" // contains a definition, so make sure this
                       // falls after all declarations (cc65 optimization)
+
 
 // assuming that channel 0 is unused in IMF music
 // produced by Id Software, as they usu. reserved that
@@ -185,6 +187,9 @@ int8_t vopl_write (unsigned char reg, unsigned char data)
 		}
 		case 0xa0: // Freq. & Keyon
 		{
+			// The formula to convert OPL BLOC:FNUM --> OPM KC KF values:
+			// val=12 * (log2(fnum) + bloc - 8.5132730792261496510681735326167
+			// INT part * 4/3 = KC. Frac part = KF
 			if (debug)
 				printf("looking for changes to KeyON & Freq\n\r");
 			if (adv > 8 || adv < 1) // NOP for invalid voice #s
@@ -211,13 +216,16 @@ int8_t vopl_write (unsigned char reg, unsigned char data)
 			{
 				// convert OPL freq to OPM KS values (grrrrrr!)
 				oplfreq[adv] = freq;
-				block = (freq & 0x1c00) >> 10;
-				freq &= 0x03ff; // remove 'block' value from freq
-				freq = flut[block][freq];
-				// freq is now the YM KC value - thanks LUT!
+//				block = (freq & 0x1c00) >> 10;
+//				freq &= 0x03ff; // remove 'block' value from freq
+//				freq = flut[block][freq];
+//				// freq is now the YM KC value - thanks LUT!
+				freq = fconvert(freq);
 				s = 0x28 + adv;
-				YMshadow[s] = freq;
-				ym_write(s,freq);
+				YMshadow[s] = freq & 0xff;
+				ym_write(s,freq & 0xff);
+				YMshadow[s+8] = freq >> 8;
+				ym_write(s+8,freq >> 8);
 
 			};
 			if ( key != oplkeys ) { // the keyon bit changed state

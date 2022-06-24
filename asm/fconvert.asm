@@ -6,8 +6,10 @@
 ; VERY MUCH appreciated!!!
 ; oct = log2(fnum)+block-8.5132730792261496510681735326167 ; more accurate
 ; note = oct*12
-; kc = floor(note)
-; kf = rem(note)
+; kc = floor(note) * 4/3 (the *4/3 comes from Grauw's discussion w/ Vampyrefrog
+; kf = rem(note)          ... on vgmrips.net)
+
+; will do *4/3 with a LUT.
 
 .export _fconvert
 
@@ -110,6 +112,12 @@ lookup_frac: ; A should hold the "remainder" of the log2 int part..
   sta KF   ; final value
   txa      ; hi of note<<3
   adc KC   ; hi of note<<2
+  tay
+  cmp #96
+  bcc get_answer
+  ldy #95  ; clamp to highest note of YM.
+get_answer:
+  lda FOURTHIRDS,y
   ldx KF   ; .A now holds KC, .X holds KF - as needed for return
 DONE:
   rts
@@ -147,3 +155,11 @@ LOGTABLE:
   .byte 220,220,221,222,223,224,224,225,226,227,228,228,229,230,231,231
   .byte 232,233,234,234,235,236,237,238,238,239,240,241,241,242,243,244
   .byte 244,245,246,247,247,248,249,249,250,251,252,252,253,254,255,255
+
+FOURTHIRDS: ; for values 0-95 which seems to be the limit of the range.
+  .byte $00,$01,$02,$04,$05,$06,$08,$09,$0A,$0C,$0D,$0E,$10,$11,$12,$14
+  .byte $15,$16,$18,$19,$1A,$1C,$1D,$1E,$20,$21,$22,$24,$25,$26,$28,$29
+  .byte $2A,$2C,$2D,$2E,$30,$31,$32,$34,$35,$36,$38,$39,$3A,$3C,$3D,$3E
+  .byte $40,$41,$42,$44,$45,$46,$48,$49,$4A,$4C,$4D,$4E,$50,$51,$52,$54
+  .byte $55,$56,$58,$59,$5A,$5C,$5D,$5E,$60,$61,$62,$64,$65,$66,$68,$69
+  .byte $6A,$6C,$6D,$6E,$70,$71,$72,$74,$75,$76,$78,$79,$7A,$7C,$7D,$7E
