@@ -11,12 +11,17 @@
 
 ; will do *4/3 with a LUT.
 
+NATTSNUMBER_INT   = 8
+NATTSNUMBER_FRAC1 = %10000011
+NATTSNUMBER_FRAC2 = %01100101
+
 .export _fconvert
 
 .segment "ZEROPAGE"
   KC:   .res 1
   KF:   .res 1
-  note: .res 2 ; compute to 8.8 accuracy and see where that goes
+  note_frac: .res 1 ; compute to 8.8 accuracy and see where that goes
+  note_int:  .res 1
 
 
 .segment "CODE"
@@ -26,8 +31,8 @@
 ;        : a.k.a. A=KC, X=KF
 block: .byte 0
 .proc _fconvert: near
-  sta note
-  stz note+1
+  sta note_frac
+  stz note_int
   txa ; prepare to do some shifting to unpack BLOCK from FNUM_HI
   tay ; stash original value in Y for fast retreival after unpacking BLOCK bits.
   lsr
@@ -37,14 +42,14 @@ block: .byte 0
   tya
   and #$03 ; A now = top 2 bits of the FNUM
   tay      ; Stash result in Y again, so that we can.....
-  ora note ; check for FNUM=0 and early exit if it is.
+  ora note_frac ; check for FNUM=0 and early exit if it is.
   beq DONE
 
   ; perform log2 FNUM (integer part) by shifting to find the leftmost
   ; bit that is set. Since this is 10-bit, the high byte shifts right
   ; and the low byte shifts left if the high byte is empty
-  ; no shift if leftmost set bit is bit 8. (bit0 of note+1)
-  ; Store int portion in note+1, and use note as the .8 frac portion.
+  ; no shift if leftmost set bit is bit 8. (bit0 of note_int)
+  ; Store int portion in note_int, and use note as the .8 frac portion.
   tya      ; un-stash the FNUM hi bits
   beq shift_left
 shift_right:
@@ -52,62 +57,68 @@ shift_right:
   bne log_is_9
 log_is_8:
   lda #8
-  sta note+1
-  lda note
+  sta note_int
+  lda note_frac
   bra lookup_frac
 log_is_9:
   lda #9
-  sta note+1
-  lda note
+  sta note_int
+  lda note_frac
   ror   ; take bit 8 and rotate into note low
   bra lookup_frac
 shift_left: ;guaranteed non-zero so no need to check X for underflow
-  lda note
+  lda note_frac
   ldx #8
 check_next_bit:
   dex
   asl
   bcc check_next_bit
-  stx note+1 ; X has accumulated the int part of the log2 operation.
+  stx note_int ; X has accumulated the int part of the log2 operation.
 
 lookup_frac: ; A should hold the "remainder" of the log2 int part..
   tax
   lda LOGTABLE,x
-  sta note
+  sta note_frac
 
+; return the 8.8 log2 instead of the KC for testbed purposes
+;  tax
+;  lda note_int
+;  rts
+; ----------------------------------------------------------
   ; first subract Natt's constant
   sec
   lda #0 ; our LUT doesn't store frac bits 8-15. Use zero.
-  sbc MAGIC_CONST_POSITIVE+2
+  sbc #NATTSNUMBER_FRAC2
 
-  lda note
-  sbc MAGIC_CONST_POSITIVE+1
-  sta note
-  lda note+1
-  sbc MAGIC_CONST_POSITIVE
-  sta note+1
-  lda note
-  rol ; use MSB of frac part of note as "rounding" yes/no bit.
-  ; now add block to note+1 to get the value for "note" in the first calc step.
-  lda note+1
+  lda note_frac
+  sbc #NATTSNUMBER_FRAC1
+  sta note_frac
+  lda note_int
+  sbc #NATTSNUMBER_INT
+  sta note_int
+;  lda note_frac
+;  rol ; use MSB of frac part of note as "rounding" yes/no bit.
+  ; now add block to note_int to get the value for "note" in the first calc step.
+  clc
+  lda note_int
   adc block
-  sta note+1
+  sta note_int
 
   ; Step 1 complete. Now do note * 12 to get the KC/KF values.
   ; note<<3 + note<<2 = note*12
-  lda note+1
-  asl note
+  lda note_int
+  asl note_frac
   rol
-  asl note
+  asl note_frac
   rol
-  ldx note
+  ldx note_frac
   stx KF
   sta KC
-  asl note
+  asl note_frac
   rol
   tax ; stash note_hi << 3 in X
   clc
-  lda note ; lo of note<<3
+  lda note_frac ; lo of note<<3
   adc KF   ; lo of note<<2
   sta KF   ; final value
   txa      ; hi of note<<3
@@ -124,12 +135,12 @@ DONE:
 .endproc
 
 .segment "RODATA"
-MAGIC_CONST_POSITIVE: ; 8.32 fixed-point rep. of Natt's Constant(tm)
-  .byte 8
-  .byte %10000011
-  .byte %01100101
-  .byte %11011101
-  .byte %01010001
+;MAGIC_CONST_POSITIVE: ; 8.32 fixed-point rep. of Natt's Constant(tm)
+;  .byte 8
+;  .byte %10000011
+;  .byte %01100101
+;  .byte %11011101
+;  .byte %01010001
 
 ;MAGIC_CONST_NEGATIVE ; 8.32 fixed-point rep. of -Natt's Constant(tm)
 ;  .byte %11110111

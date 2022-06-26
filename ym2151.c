@@ -12,8 +12,10 @@ uint8_t YMshadow[256]; // shadow the YM state
 
 void ym_write(uint8_t reg, uint8_t data)
 {
-//	if (debug)
-//		cprintf("ymwrite: 0x%02x <-- 0x%02x\n\r",reg,data);
+//  if ((reg != 0x08) && (reg != 0x01)) {
+//    if (reg == 0x19) (YMshadow[0x1a]=data);
+//    else YMshadow[reg]=data;
+//  }
 	while (YM.dat & 0x80) { }; // wait for busy flag to be clear
 	YM.reg = reg;
 	YM.dat = data;
@@ -32,7 +34,7 @@ void YMtestpatch()
 		{0x30,0x24,0x1f,0x09,0x00,0xff}
 	};
 
-  volatile const char* canary = "Rolo Tomassi";
+  volatile const char* canary = "rolo tomassi";
 
 	for (v=0 ; v<8 ; v++)
 	{
@@ -49,6 +51,20 @@ void YMtestpatch()
 	}
 }
 
+void ym_silence() {
+  uint8_t voice;
+  for (voice=0  ; voice<8 ; voice++) {
+    ym_write(0xe0+voice,0x0f);
+    ym_write(0xe8+voice,0x0f);
+    ym_write(0xf0+voice,0x0f);
+    ym_write(0xf8+voice,0x0f);
+    ym_write(0x08,voice);
+    YMshadow[0xe0] = 0x0f;
+    YMshadow[0xe8] = 0x0f;
+    YMshadow[0xf0] = 0x0f;
+    YMshadow[0xf8] = 0x0f;
+  }
+}
 
 void ym_init() {
   int i;

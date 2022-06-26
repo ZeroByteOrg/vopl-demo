@@ -10,23 +10,33 @@
 // The goal here is to eventually whittle all of this away into being a
 // set of routines in pure assembly.
 
+#define FCONVERT
+
 #include <stdint.h>
+
+#ifdef DEBUG
 #include <stdio.h>    // for the debug-related IO
 #include <conio.h>
-
 // in lieu of project H files, just declare the stuff we intend to use:
 extern uint8_t debug;
+#endif
 
 extern uint8_t YMshadow[256]; // shadow the YM state
 extern void ym_init();
+extern void ym_silence();
 extern void ym_write(uint8_t reg, uint8_t data);
+
+#ifdef FCONVERT
 extern uint16_t __fastcall__ fconvert(uint16_t blockfnum);
+#endif
 
 uint8_t oplkeys;       // shadow the KeyON bits for the 8 usable voices
 uint16_t oplfreq[8];   // shadow regs for the OPL frequencies
 
-//#include "ymlookup.h" // contains a definition, so make sure this
+#ifndef FCONVERT
+#include "ymlookup.h" // contains a definition, so make sure this
                       // falls after all declarations (cc65 optimization)
+#endif
 
 
 // assuming that channel 0 is unused in IMF music
@@ -116,12 +126,13 @@ int8_t vopl_write (unsigned char reg, unsigned char data)
 								// because the per-voice ranges use
 								// OPL voice# as the index, not Oper#'s
 	adv = (reg & 0x0f);	// adv = AdLib Voice #
+#ifdef DEBUG
 	if (debug) {
 	  printf("\n\ropl2ym: %02x %02x\n\r",reg, data);
 	  printf(" - op %02x\n\r - ch %02x\n\r",op,ch);
 	  printf(" -adv %02x\n\r",adv);
 	};
-
+#endif
 	switch (reg & 0xe0) // mask the reg to just the range values
 	{
 
@@ -190,16 +201,20 @@ int8_t vopl_write (unsigned char reg, unsigned char data)
 			// The formula to convert OPL BLOC:FNUM --> OPM KC KF values:
 			// val=12 * (log2(fnum) + bloc - 8.5132730792261496510681735326167
 			// INT part * 4/3 = KC. Frac part = KF
+#ifdef DEBUG
 			if (debug)
 				printf("looking for changes to KeyON & Freq\n\r");
+#endif
 			if (adv > 8 || adv < 1) // NOP for invalid voice #s
 				return -1;
 			adv--;
 			// load shadow freq/keycodes
 			freq = oplfreq[adv];
 			key  = oplkeys;
+#ifdef DEBUG
 			if (debug)
 				printf("--f0=%04x k0=%02x\n\r",freq,key);
+#endif
 			if (reg >= 0xb0)
 			{
 				freq = (freq & 0x00ff) | ((data & 0x1f) << 8);
@@ -210,22 +225,30 @@ int8_t vopl_write (unsigned char reg, unsigned char data)
 			{
 				freq = (freq & 0xff00) | data;
 			}
+#ifdef DEBUG
 			if (debug)
 				printf("--f1=%04x k1=%02x\n\r",freq,key);
+#endif
 			if ( freq != oplfreq[adv] )
 			{
 				// convert OPL freq to OPM KS values (grrrrrr!)
 				oplfreq[adv] = freq;
-//				block = (freq & 0x1c00) >> 10;
-//				freq &= 0x03ff; // remove 'block' value from freq
-//				freq = flut[block][freq];
-//				// freq is now the YM KC value - thanks LUT!
+#ifdef FCONVERT
 				freq = fconvert(freq);
 				s = 0x28 + adv;
 				YMshadow[s] = freq & 0xff;
 				ym_write(s,freq & 0xff);
 				YMshadow[s+8] = freq >> 8;
 				ym_write(s+8,freq >> 8);
+#else
+				block = (freq & 0x1c00) >> 10;
+				freq &= 0x03ff; // remove 'block' value from freq
+				freq = flut[block][freq];
+				// freq is now the YM KC value - thanks LUT!
+				s = 0x28 + adv;
+				YMshadow[s] = freq & 0xff;
+				ym_write(s,freq);
+#endif
 
 			};
 			if ( key != oplkeys ) { // the keyon bit changed state
@@ -234,6 +257,7 @@ int8_t vopl_write (unsigned char reg, unsigned char data)
 				// operator in the voice)
 				keyonoff  = (data & 0x20) >> 1;
 				keyonoff |= (data & 0x20) >> 2;
+#ifdef DEBUG
 				if (debug)
 				{
 					printf("KeyUPDN event for voice %d\n\r",adv);
@@ -242,6 +266,7 @@ int8_t vopl_write (unsigned char reg, unsigned char data)
 					while (!kbhit()) {}
 					cgetc(); // consume the keystroke
 				}
+#endif
 				YMshadow[8] = keyonoff + adv;
 				ym_write(8,YMshadow[8]);
 			};
@@ -274,6 +299,11 @@ int8_t vopl_write (unsigned char reg, unsigned char data)
 		}
 	}; // switch(reg & 0xe0)
 };
+
+void vopl_silence() {
+	ym_silence();
+	oplkeys = 0;
+}
 
 void vopl_init() {
   uint8_t i;

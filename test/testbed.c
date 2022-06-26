@@ -24,10 +24,13 @@ uint16_t prompt(char* p) {
 
 
 int main() {
+//  int f;
+//  int r;
 	cputc(CH_FONT_UPPER);
 	while (1) {
-		block = 256;
-		while (block > 7) {
+		block = 4;
+#if(1)
+		while (block >= 8) {
 		  block = prompt("enter block no: ");
 			if (block >= 8) printf("block must be 0-7.\n");
 		}
@@ -36,7 +39,8 @@ int main() {
 			blockfnum = prompt("enter f-number: ");
 			if (blockfnum >= 1024) printf("fnum must be 0-1023\n");
 		}
-		blockfnum = (blockfnum/2) | (block << 10);
+#endif
+		blockfnum = (blockfnum/1) | (block << 10);
 		blockfnum = fconvert(blockfnum);
 		printf ("\nthat gives an opm equivalent kc:%02x kf:%02x\n",blockfnum&0xff,blockfnum>>8);
 	}

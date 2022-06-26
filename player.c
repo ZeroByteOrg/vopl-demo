@@ -106,6 +106,8 @@ void player_advance() {
       }
       // see if we are at the end of the song... If so, loop to beginning.
       if ((RAM_BANK >= songEndbank) && (songPtr >= songEOF)) {
+        vopl_silence(); // mute the sound while looping to suppress the noisy
+                        // patch loads.
         songPtr = songStart;
         songBank = songStartBank;
         RAM_BANK = songBank;

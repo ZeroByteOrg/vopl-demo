@@ -1060,13 +1060,13 @@
 //     : fnum * (2^($oct-4) - 1) = freq /
 
 
-//if (!isset($argv[2])) { print "usage: $argv[0] <bloc> <fnum>\n"; exit(1);}
-$bloc = 4;
-$x = 12 * log(220,2);
-printf("Midi note = %x\n",floor($x));
+if (!isset($argv[2])) { print "usage: $argv[0] <bloc> <fnum>\n"; exit(1);}
+$bloc = $argv[1];
+$fnum = ($argv[2]&0x3ff);
+//$bloc = 4;
 printf("%19sLUT    NAT\n","");
-foreach (array(617,653,692,733,777,823,872,924,979,1037,1099,1164) as $fnum) {
-  $fnum = $fnum>>1;
+//foreach (array(617,653,692,733,777,823,872,924,979,1037,1099,1164) as $fnum) {
+//  $fnum = $fnum>>1;
   $kc = $flut[$bloc][$fnum];
   $kf = 0;
   printf("bloc:%d fnum:%5d: ",$bloc,$fnum);
@@ -1076,5 +1076,5 @@ foreach (array(617,653,692,733,777,823,872,924,979,1037,1099,1164) as $fnum) {
   $kc = floor($val);
   $kf = floor(($val-$kc)*256);
   //$kc = floor($kc * 4 / 3);
-  printf("%02x %02d\n",floor($kc*4/3),$kf & 0xfc);
-}
+  printf("%02x %02x\n",floor($kc*4/3),$kf & 0xfc);
+//}
