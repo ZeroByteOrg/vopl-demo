@@ -4,6 +4,7 @@ ASM_SRCS = $(wildcard asm/*.asm)
 ALL_HDRS = $(wildcard *.h)
 ALL_C    = $(wildcard *.c)
 TARGET   = VOPLDEMO.PRG
+ASSETS   = TITLE.BIN PAL.BIN SPR.BIN
 
 RES		= ./res
 TOOLS	= ./tools
@@ -12,7 +13,7 @@ imgtool	= $(TOOLS)/img2tileset.py
 bin2c   = $(TOOLS)/bin2c.py
 
 .PHONY: all
-all: $(TARGET) TITLE.BIN PAL.BIN
+all: $(TARGET) $(ASSETS)
 	@echo "Enjoy the demo."
 
 $(TARGET): $(ALL_C) $(ASM_SRCS) song.h ymlookup.h
@@ -21,8 +22,11 @@ $(TARGET): $(ALL_C) $(ASM_SRCS) song.h ymlookup.h
 TITLE.BIN: $(RES)/wolf3dtitle.png
 	$(imgtool) -s 320x240 -b 8 $< $@
 
-PAL.BIN:
+PAL.BIN: $(TOOLS)/mkpal.php
 	$(TOOLS)/mkpal.php
+
+SPR.BIN: $(RES)/pc13.png
+	$(imgtool) -s 32x64 -b 4 $< $@
 
 song.h: $(RES)/song.imf
 	$(bin2c) song $< $@

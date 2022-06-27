@@ -50,16 +50,16 @@ char player_init() {
     IRQVECTOR = (uint16_t)&irqhandler;
     __asm__("cli");
   }
-  printf ("survived setting up the irq\n");
+  printf ("IRQ handler installed.\n");
   songStart = &NULLSONG;
   songEOF = &NULLSONG+1;
   songStartBank = 1; // irrelevent for NULLSONG, but set to be thorough.
   songEndbank = 1;   // ditto.
   songPtr = songStart;
   songBank = songStartBank;
-  printf ("initializing vopl...\n");
+  printf ("Initializing VOPL...");
   vopl_init();
-  printf ("vopl initialized.\n");
+  printf ("done.\n");
   return 1;
 }
 

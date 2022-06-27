@@ -40,6 +40,12 @@ uint8_t debug = 1;
 
 extern void __fastcall__ vsync();
 
+const char spriteregs[24] = {
+	0x60, 0x09, 0xc8, 0x00, 0x96, 0x00, 0x0c, 0xe7,
+	0x80, 0x09, 0xe8, 0x00, 0x96, 0x00, 0x0c, 0xe7,
+	0xa0, 0x09, 0x08, 0x01, 0x96, 0x00, 0x0c, 0xe7
+};
+
 static void vload(const char* filename, const uint8_t bank, const uint16_t address)
 {
 	cbm_k_setnam(filename);
@@ -59,25 +65,49 @@ static void bvload(const char* filename, const uint8_t bank, const uint16_t addr
 
 static void setBG()
 {
-	//int i;
-
-	textcolor(COLOR_GRAY2);  // this color works well for transparent debug overlay
+	char i;
 	videomode(VIDEOMODE_40x30);
 
+	// hide display while preparing the screen.
+	VERA.display.video		= 0x01; // hi-nib=layer0 ena, lo=VGA output
 
 	VERA.layer0.config		= 0x07; // MapH&W=0,Bitmap=1,depth=3
 	VERA.layer0.hscroll		= 0;    // sets palette offset in bitmap mode
 	VERA.layer0.tilebase	= 0x00;
 	VERA.layer1.config   |= 0x08; // enable 256-color text mode
-  VERA.display.video		= 0x31; // hi-nib=layer0 ena, lo=VGA output
 
-	gotoxy (15,15);
-	cprintf ("loading");
+	// Set the sprite registers for the PC13 logo.
+	VERA.address=0xfc00;
+	VERA.address_hi=1 | VERA_INC_1;
+	for(i=0;i<24;i++) {
+		VERA.data0=spriteregs[i];
+	}
+	// load the palette and sprite data to begin showing
+	// the PC13 logo...
 	vload("pal.bin",1,0xfa00);
-	vload("title.bin",0,0x0000);
+	vload("spr.bin",1,0x2c00);
+	textcolor(COLOR_GRAY2);  // this color works well for transparent debug overlay
+	printf("%c",CH_FONT_LOWER);
 	clrscr();
 	gotoxy(0,29);
+}
 
+void showPC13() {
+	// set BG color to the light blue
+	VERA.address=0xfa00;
+	VERA.address_hi = 1 | VERA_INC_1;
+	VERA.data0 = 0xaf;
+	VERA.data0 = 0x02;
+	VERA.display.video = 0x41;
+}
+
+void showTitleScreen() {
+	// set BG color to black
+	VERA.address=0xfa00;
+	VERA.address_hi = 1 | VERA_INC_1;
+	VERA.data0 = 0;
+	VERA.data0 = 0;
+	VERA.display.video = 0x31;
 }
 
 char songlist[11]={
@@ -112,17 +142,20 @@ void main()
 	char k[8] = {0,0,0,0,0,0,0,0};
 	char key;
 
+	setBG();
 	player_init();
 	printf("player initialized.\n");
   build_song_index();
 	printf("song index built.\n");
 	debug = 0;
 	play_song(active_song);
-	setBG();
+	showPC13();
+	vload("title.bin",0,0x0000);
+	showTitleScreen();
   while(kbhit()) {cgetc();} // clear the input buffer.
 	VERA.display.video &= ~(1<<5);
-	printf("Loading song %d: \"%s\"\n",active_song,SONGNAME[songlist[active_song]]);
-	printf("%u bytes loaded. Done\n\n",chunkEnd.bytes);
+//	printf("Loading song %d: \"%s\"\n",active_song,SONGNAME[songlist[active_song]]);
+//	printf("%u bytes loaded. Done\n\n",chunkEnd.bytes);
 	printf("Debug console ready.\n");
 	printf("Press ? for help\n");
 	VERA.display.video |= (1<<5);
