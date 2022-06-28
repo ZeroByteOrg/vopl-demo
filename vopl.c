@@ -310,7 +310,7 @@ void vopl_init() {
 
   ym_init();
   // initialize the OPL shadow values for freq/KeyON states
-  for ( i=0 ; i < sizeof(oplfreq) ; i++)
+  for ( i=0 ; i < 8 ; i++)
   {
     oplfreq[i] = 0;
   }
