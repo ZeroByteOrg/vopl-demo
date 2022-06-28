@@ -72,11 +72,12 @@ int8_t vopl_write (unsigned char reg, unsigned char data)
 	 * or not. Only the Freq/KeyON registers are checked like this.
 	 */
 
-	uint8_t adv;       // AdLib voice #
-	uint8_t op, ch, s; // YM Operator, YM Channel, Shadow Register indx.
-	uint8_t key;	   // New state of OPL keyON flag (if 0xb0 written)
-	uint16_t freq;
-	uint8_t keyonoff, block;
+	// setting storage class = static for the locals here for performance.
+	static  uint8_t adv;       // AdLib voice #
+	static 	uint8_t op, ch, s; // YM Operator, YM Channel, Shadow Register indx.
+	static 	uint8_t key;	   // New state of OPL keyON flag (if 0xb0 written)
+	static 	uint16_t freq;
+	static 	uint8_t keyonoff, block;
 
 // -------------------------------------- debug
 //	if (reg < 0xb0 || reg >= 0xb9)
@@ -109,6 +110,17 @@ int8_t vopl_write (unsigned char reg, unsigned char data)
 			case 0xbd: // AM Depth / Vibrato / Rhythm Control
 			default:
 			{
+				block = 0;
+				// set AMD and PMD from the top two bits of this write.
+				// don't bother about de-duplicating data... just write both.
+				if (data&0x80)
+					ym_write(0x19,0x0f); // no idea if these are good choices....
+				else
+					ym_write(0x19,0x03); // AMD for OPL is 4db(set) 1db (clear)
+				if (data&0x40)
+					ym_write(0x19,0x58 | 0x80);
+				else
+					ym_write(0x19,0x2c | 0x80);
 				return (-1); // (currently) unsupported register
 				break;
 			}
@@ -157,15 +169,28 @@ int8_t vopl_write (unsigned char reg, unsigned char data)
 			}
 			ym_write(s,YMshadow[s]);
 
-			// ignore KS bit (4) for now. This effect not native to YM.
-
 			// use LFO to do Vibrato effect
-			// TODO: Vibrato effects
+			// bit6 = PM enable (per operator, but we'll have to settle for both)
+			s=0x38+adv-1;
+			block = data&0x40 ? 3 << 4 : 0;
+			YMshadow[s] = (YMshadow[s] & 0x03) | block;
+			// note: this logic may result in inaccurate behavior depending on
+			// whether the music enables vibrato on both the carrier and the modulator
+			// or just on one or the other. May need to track both and enable vibrato
+			// if either is set....
+			ym_write(s,YMshadow[s]);
+
+			// bit7 = AM enable (per operator)
+			s=0xa0+op;
+			YMshadow[s] = (YMshadow[s] & 0x7F) | (data & 0x80);
+			ym_write(s,YMshadow[s]);
 
 			// handle bits 0-3 (MUL) - just write them to YM
 			s = 0x40 + op;
 			YMshadow[s] = (YMshadow[s] & 0xf0) | ( data & 0x0f );
 			ym_write(s,YMshadow[s]);
+
+			// ignore KS bit (4) for now. This effect not native to YM.
 			break;
 		}
 		case 0x40: // KS (2MSB) + TL (6LSB)

@@ -91,6 +91,21 @@ void ym_init() {
   YMshadow[0x25] = 0xc4;
   YMshadow[0x26] = 0xc4;
   YMshadow[0x27] = 0xc4;
+  YMshadow[0x38] = 0x02; // AMS=2 PMS=0
+  YMshadow[0x39] = 0x02;
+  YMshadow[0x3a] = 0x02;
+  YMshadow[0x3b] = 0x02;
+  YMshadow[0x3c] = 0x02;
+  YMshadow[0x3d] = 0x02;
+  YMshadow[0x3e] = 0x02;
+  YMshadow[0x3f] = 0x02;
+
+  YMshadow[0x18] = 0xd0; // LFO Freq = 6.83hz - splitting the diff
+                         // between OPL values for AM and PM.
+  YMshadow[0x1b] = 0x01; // LFO Waveform = triangle
+  YMshadow[0x19] = 0x03; // AMD at low setting by default
+  YMshadow[0x1a] = 0x80 | 0x2c; // "PMS" register at low setting by default.
+
 
   // release all 8 voices
   for (i=0; i<8 ; i++) {
@@ -100,9 +115,11 @@ void ym_init() {
     ym_write(0xf8+i,0x0f);
     ym_write(0x08,i);
   }
+
+
   // write the YMshadow out to the real YM.
   for (i=0 ; i < 256 ; i++ ) {
-    if (i==0x1a) ym_write(0x1a,0x80);
+    if (i==0x1a) ym_write(0x19,YMshadow[0x1a]);
     else ym_write(i,YMshadow[i]);
   };
 }
