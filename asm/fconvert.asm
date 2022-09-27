@@ -149,6 +149,7 @@ DONE:
 ;  .byte %00100010
 ;  .byte %10101111
 
+; Thanks to Scott Robinson for generating this LUT. --RIP
 LOGTABLE:
   .byte 0,  1,  3,  4,  6,  7,  9,  10, 11, 13, 14, 16, 17, 18, 20, 21
   .byte 22, 24, 25, 26, 28, 29, 30, 32, 33, 34, 36, 37, 38, 40, 41, 42
